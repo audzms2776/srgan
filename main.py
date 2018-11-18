@@ -39,9 +39,11 @@ def train():
 
     ###====================== PRE-LOAD DATA ===========================###
     train_hr_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.hr_img_path, regx='.*.png', printable=False))
+    train_lr_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.lr_img_path, regx='.*.png', printable=False))
 
     ## If your machine have enough memory, please pre-load the whole train set.
     train_hr_imgs = tl.vis.read_images(train_hr_img_list, path=config.TRAIN.hr_img_path, n_threads=32)
+    train_lr_imgs = tl.vis.read_images(train_lr_img_list, path=config.TRAIN.hr_img_path, n_threads=32)
 
     ###========================== DEFINE MODEL ============================###
     ## train inference
@@ -139,7 +141,7 @@ def train():
         for idx in range(0, len(train_hr_imgs), batch_size):
             step_time = time.time()
             b_imgs_384 = train_hr_imgs[idx:idx + batch_size]
-            b_imgs_96 = tl.prepro.threading_data(b_imgs_384, fn=downsample_fn)
+            b_imgs_96 = train_lr_imgs[idx:idx + batch_size]
             ## update G
             errM, _ = sess.run([mse_loss, g_optim_init],
                 {t_image: b_imgs_96, t_target_image: b_imgs_384})
@@ -189,10 +191,11 @@ def train():
         ## If your machine have enough memory, please pre-load the whole train set.
         for idx in range(0, len(train_hr_imgs), batch_size):
             step_time = time.time()
-            b_imgs_384 = tl.prepro.threading_data(train_hr_imgs[idx:idx + batch_size], fn=crop_sub_imgs_fn, is_random=True)
-            b_imgs_96 = tl.prepro.threading_data(b_imgs_384, fn=downsample_fn)
+            b_imgs_384 = train_hr_imgs[idx:idx + batch_size]
+            b_imgs_96 = train_lr_imgs[idx:idx + batch_size]
             ## update D
-            errD, _ = sess.run([d_loss, d_optim], {t_image: b_imgs_96, t_target_image: b_imgs_384})
+            errD, _ = sess.run([d_loss, d_optim],
+                {t_image: b_imgs_96, t_target_image: b_imgs_384})
             ## update G
             errG, errM, errV, errA, _ = sess.run([g_loss, mse_loss, vgg_loss, g_gan_loss, g_optim], {t_image: b_imgs_96, t_target_image: b_imgs_384})
             print("Epoch [%2d/%2d] %4d time: %4.4fs, d_loss: %.8f g_loss: %.8f (mse: %.6f vgg: %.6f adv: %.6f)" %
