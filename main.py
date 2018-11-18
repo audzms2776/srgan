@@ -193,7 +193,7 @@ def train(mode):
 
             ## quick evaluation on train set
             if (epoch != 0) and (epoch % 10 == 0):
-                out = sess.run(net_g_test.outputs, {t_image: sample_imgs_96)
+                out = sess.run(net_g_test.outputs, {t_image: sample_imgs_96})
                 print("[*] save images")
                 tl.vis.save_images(out, [ni, ni], save_dir_gan + '/train_%d.png' % epoch)
 
