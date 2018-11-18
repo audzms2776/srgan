@@ -154,7 +154,7 @@ def train():
 
         ## quick evaluation on train set
         if (epoch != 0) and (epoch % 10 == 0):
-            out = sess.run(net_g_test.outputs, {t_image: sample_imgs_96})  #; print('gen sub-image:', out.shape, out.min(), out.max())
+            out = sess.run(net_g_test.outputs, {t_image: train_lr_imgs[0:batch_size]}) 
             print("[*] save images")
             tl.vis.save_images(out, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
 
@@ -178,16 +178,6 @@ def train():
         epoch_time = time.time()
         total_d_loss, total_g_loss, n_iter = 0, 0, 0
 
-        ## If your machine cannot load all images into memory, you should use
-        ## this one to load batch of images while training.
-        # random.shuffle(train_hr_img_list)
-        # for idx in range(0, len(train_hr_img_list), batch_size):
-        #     step_time = time.time()
-        #     b_imgs_list = train_hr_img_list[idx : idx + batch_size]
-        #     b_imgs = tl.prepro.threading_data(b_imgs_list, fn=get_imgs_fn, path=config.TRAIN.hr_img_path)
-        #     b_imgs_384 = tl.prepro.threading_data(b_imgs, fn=crop_sub_imgs_fn, is_random=True)
-        #     b_imgs_96 = tl.prepro.threading_data(b_imgs_384, fn=downsample_fn)
-
         ## If your machine have enough memory, please pre-load the whole train set.
         for idx in range(0, len(train_hr_imgs), batch_size):
             step_time = time.time()
@@ -210,7 +200,7 @@ def train():
 
         ## quick evaluation on train set
         if (epoch != 0) and (epoch % 10 == 0):
-            out = sess.run(net_g_test.outputs, {t_image: sample_imgs_96})  #; print('gen sub-image:', out.shape, out.min(), out.max())
+            out = sess.run(net_g_test.outputs, {t_image: train_lr_imgs[0:batch_size]})  #; print('gen sub-image:', out.shape, out.min(), out.max())
             print("[*] save images")
             tl.vis.save_images(out, [ni, ni], save_dir_gan + '/train_%d.png' % epoch)
 
