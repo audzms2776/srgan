@@ -43,7 +43,7 @@ def train():
 
     ## If your machine have enough memory, please pre-load the whole train set.
     train_hr_imgs = tl.vis.read_images(train_hr_img_list, path=config.TRAIN.hr_img_path, n_threads=32)
-    train_lr_imgs = tl.vis.read_images(train_lr_img_list, path=config.TRAIN.hr_img_path, n_threads=32)
+    train_lr_imgs = tl.vis.read_images(train_lr_img_list, path=config.TRAIN.lr_img_path, n_threads=32)
 
     ###========================== DEFINE MODEL ============================###
     ## train inference
