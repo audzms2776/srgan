@@ -13,6 +13,11 @@ def get_imgs_fn(file_name, path):
     # return scipy.misc.imread(path + file_name).astype(np.float)
     return scipy.misc.imread(path + file_name, mode='RGB')
 
+def normal_img_fn(x):
+    x = x / (255. / 2.)
+    x = x - 1.
+    return x
+
 def crop_sub_imgs_fn(x, is_random=True):
     x = crop(x, wrg=384, hrg=384, is_random=is_random)
     x = x / (255. / 2.)
