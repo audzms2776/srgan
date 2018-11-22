@@ -9,6 +9,7 @@ import logging, scipy
 
 import tensorflow as tf
 import tensorlayer as tl
+from tensorboardX import SummaryWriter
 from model import SRGAN_g, SRGAN_d, Vgg19_simple_api
 from utils import *
 from config import config, log_config
@@ -24,6 +25,7 @@ n_epoch_init = config.TRAIN.n_epoch_init
 n_epoch = config.TRAIN.n_epoch
 lr_decay = config.TRAIN.lr_decay
 decay_every = config.TRAIN.decay_every
+writer = SummaryWriter()
 
 ni = int(np.sqrt(batch_size))
 
@@ -142,8 +144,10 @@ def train(mode):
                 print("Epoch [%2d/%2d] %4d time: %4.4fs, mse: %.8f " % (epoch, n_epoch_init, n_iter, time.time() - step_time, errM))
                 total_mse_loss += errM
                 n_iter += 1
+
             log = "[*] Epoch: [%2d/%2d] time: %4.4fs, mse: %.8f" % (epoch, n_epoch_init, time.time() - epoch_time, total_mse_loss / n_iter)
             print(log)
+            writer.add_scalar('loss/init', total_mse_loss / n_iter, epoch)
 
             ## quick evaluation on train set
             if (epoch != 0) and (epoch % 10 == 0):
@@ -154,6 +158,8 @@ def train(mode):
             ## save model
             if (epoch != 0) and (epoch % 10 == 0):
                 tl.files.save_npz(net_g.all_params, name=checkpoint_dir + '/g_{}_init.npz'.format(tl.global_flag['mode']), sess=sess)
+            
+        writer.close()
     else:
         ###========================= train GAN (SRGAN) =========================###
         for epoch in range(0, n_epoch + 1):
@@ -188,8 +194,10 @@ def train(mode):
                 n_iter += 1
 
             log = "[*] Epoch: [%2d/%2d] time: %4.4fs, d_loss: %.8f g_loss: %.8f" % (epoch, n_epoch, time.time() - epoch_time, total_d_loss / n_iter,
-                                                                                    total_g_loss / n_iter)
+                                                                                total_g_loss / n_iter)
             print(log)
+            writer.add_scalar('loss/g_loss', total_d_loss / n_iter, epoch)
+            writer.add_scalar('loss/d_loss', total_g_loss / n_iter, epoch)
 
             ## quick evaluation on train set
             if (epoch != 0) and (epoch % 10 == 0):
@@ -202,6 +210,7 @@ def train(mode):
                 tl.files.save_npz(net_g.all_params, name=checkpoint_dir + '/g_{}.npz'.format(tl.global_flag['mode']), sess=sess)
                 tl.files.save_npz(net_d.all_params, name=checkpoint_dir + '/d_{}.npz'.format(tl.global_flag['mode']), sess=sess)
 
+        writer.close()
 
 def evaluate():
     ## create folders to save result images
