@@ -1,11 +1,12 @@
 from PIL import Image, ImageOps, ImageCms
 from random import randrange
+from tqdm import tqdm
 import os
 import io 
 
 original_path = 'original'
 resize_path = 'resize'
-folder_arr = ['0']
+folder_arr = next(os.walk('.'))[1]
 
 def convert_to_srgb(img):
     icc = img.info.get('icc_profile', '')
@@ -35,6 +36,6 @@ def random_crop(folder, image_name):
 for folder in folder_arr:
     img_names = os.listdir(folder)
     
-    for name in img_names:
+    for name in tqdm(img_names):
         random_crop(folder, name)
 
