@@ -2,12 +2,16 @@ import tensorflow as tf
 import tensorlayer as tl
 import scipy
 import numpy as np
+import os
 from tensorlayer.prepro import *
 from config import config
 
 
-def read_tf_img(path, name, size):
-    temp = tf.read_file(path + name)
+def read_file_list(img_dir):
+    return [img_dir + x for x in os.listdir(img_dir)]
+
+def read_tf_img(name, size):
+    temp = tf.read_file(name)
     temp = tf.image.decode_image(temp, channels=3)
     temp = tf.image.per_image_standardization(temp)
     temp = tf.reshape(temp, [size, size, 3])
@@ -15,18 +19,18 @@ def read_tf_img(path, name, size):
     return temp
 
 def _parse_function(lr_name, hr_name):
-    lr_img = read_tf_img(config.TRAIN.lr_img_path, lr_name, 96)
-    hr_img = read_tf_img(config.TRAIN.hr_img_path, hr_name, 384)
+    lr_img = read_tf_img(lr_name, 96)
+    hr_img = read_tf_img(hr_name, 384)
 
     return lr_img, hr_img
 
-def train_input_fn(lr_list, hr_list):    
+def train_input_fn(lr_list, hr_list, epoch):    
     return tf.data.Dataset \
         .from_tensor_slices((lr_list, hr_list)) \
         .map(_parse_function) \
-        .repeat() \
         .shuffle(buffer_size=100) \
         .batch(config.TRAIN.batch_size) \
+        .repeat(epoch) \
         .make_one_shot_iterator() \
         .get_next()
         
