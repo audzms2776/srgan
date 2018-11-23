@@ -120,7 +120,7 @@ def train(mode):
     # net_vgg.print_layers()
 
     ###============================= TRAINING ===============================###
-    sample_imgs_96 = tl.prepro.threading_data(train_lr_imgs[0:batch_size], fn=downsample_fn)
+    sample_imgs_96 = tl.prepro.threading_data(train_lr_imgs[0:batch_size], fn=normal_img_fn)
 
     ###========================= initialize G ====================###
 
