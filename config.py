@@ -5,7 +5,7 @@ config = edict()
 config.TRAIN = edict()
 
 ## Adam
-config.TRAIN.batch_size = 16
+config.TRAIN.batch_size = 15
 config.TRAIN.lr_init = 1e-4
 config.TRAIN.beta1 = 0.9
 
@@ -20,8 +20,8 @@ config.TRAIN.lr_decay = 0.1
 config.TRAIN.decay_every = int(config.TRAIN.n_epoch / 2)
 
 ## train set location
-config.TRAIN.hr_img_path = 'original/'
-config.TRAIN.lr_img_path = 'resize/'
+config.TRAIN.hr_img_path = 'train/original/'
+config.TRAIN.lr_img_path = 'train/resize/'
 
 config.VALID = edict()
 ## test set location

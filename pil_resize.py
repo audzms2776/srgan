@@ -1,12 +1,14 @@
 from PIL import Image, ImageOps, ImageCms
 from random import randrange
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
 import os
 import io 
 
 original_path = 'original'
 resize_path = 'resize'
 folder_arr = next(os.walk('.'))[1]
+pbar = None
 
 def convert_to_srgb(img):
     icc = img.info.get('icc_profile', '')
@@ -17,7 +19,9 @@ def convert_to_srgb(img):
         img = ImageCms.profileToProfile(img, sPrf, dPrf)
     return img
 
-def random_crop(folder, image_name):
+def random_crop(x):
+    folder = x['folder']
+    image_name = x['image_name']
     img1 = Image.open(folder + '/' + image_name)
 
     try:
@@ -32,10 +36,19 @@ def random_crop(folder, image_name):
         fit_img_l.save(l_name, format='PNG', icc_profile=fit_img_l.info.get('icc_profile',''))
     except:
         pass
-
-for folder in folder_arr:
-    img_names = os.listdir(folder)
     
-    for name in tqdm(img_names):
-        random_crop(folder, name)
+    pbar.update(1)
 
+if __name__ == "__main__":
+    arr = []
+
+    for folder in folder_arr:
+        img_names = os.listdir(folder)
+        
+        for name in img_names:
+            arr.append({'folder': folder, 'image_name': name})
+
+    pbar = tqdm(total=len(arr))
+
+    with ThreadPoolExecutor() as executor:
+        executor.map(random_crop, arr)
