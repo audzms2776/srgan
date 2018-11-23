@@ -6,3 +6,7 @@ sample/
 samples/
 checkpoint/
 __pycache__/
+valid/
+train/
+original/
+resize/

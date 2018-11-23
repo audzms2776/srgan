@@ -25,8 +25,8 @@ config.TRAIN.lr_img_path = 'train/resize/'
 
 config.VALID = edict()
 ## test set location
-config.VALID.hr_img_path = 'validation/original/'
-config.VALID.lr_img_path = 'validation/resize/'
+config.VALID.hr_img_path = 'valid/original/'
+config.VALID.lr_img_path = 'valid/resize/'
 
 def log_config(filename, cfg):
     with open(filename, 'w') as f:
