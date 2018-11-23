@@ -9,15 +9,16 @@ from model import SRGAN_g, SRGAN_d, Vgg19_simple_api
 # labels: hr_list
 def g_init_model(features, labels, mode, params):
     net_g = SRGAN_g(features, is_train=True, reuse=False)
+    net_g_test = SRGAN_g(features, is_train=False, reuse=True)
+    
+    tf.summary.image('g_init_image', net_g_test.outputs)
+    tf.summary.image('label_image', labels)
 
     if mode == tf.estimator.ModeKeys.EVAL:
-        net_g_test = SRGAN_g(features, is_train=False, reuse=True)
-        tf.summary.image('g_init_image', net_g_test.outputs)
-        tf.summary.image('label_image', labels)
         mse_loss = tl.cost.mean_squared_error(net_g_test.outputs, labels, is_mean=True)
-
         return tf.estimator.EstimatorSpec(mode, loss=mse_loss)            
 
+    tf.summary.image('g_init_image', net_g.outputs)
     mse_loss = tl.cost.mean_squared_error(net_g.outputs, labels, is_mean=True)
     g_vars = tl.layers.get_variables_with_name('SRGAN_g', True, True)
 
