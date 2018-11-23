@@ -24,8 +24,8 @@ def g_init_model(features, labels, mode, params):
     with tf.variable_scope('learning_rate'):
         lr_v = tf.Variable(config.TRAIN.lr_init, trainable=False)
 
-    g_optim_init = tf.train.AdamOptimizer(lr_v, beta1=config.TRAIN.beta1) \
-                            .minimize(mse_loss, var_list=g_vars, global_step=tf.train.get_global_step())
+    g_optim_init = tf.train.AdamOptimizer(lr_v, beta1=config.TRAIN.beta1).minimize(mse_loss, var_list=g_vars,
+                                                                                  global_step=tf.train.get_global_step())
 
     return tf.estimator.EstimatorSpec(mode, loss=mse_loss, train_op=g_optim_init)
 
