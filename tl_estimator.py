@@ -8,18 +8,19 @@ from model import SRGAN_g, SRGAN_d, Vgg19_simple_api
 # features: lr_list
 # labels: hr_list
 def g_init_model(features, labels, mode, params):
+    if mode == tf.estimator.ModeKeys.PREDICT:
+        net_g_test = SRGAN_g(features, is_train=False)
+
+        predictions = {
+            'generated_images': net_g_test.outputs
+        }
+
+        return tf.estimator.EstimatorSpec(mode, predictions=predictions)            
+
     net_g = SRGAN_g(features, is_train=True)
-    net_g_test = SRGAN_g(features, is_train=False)
-    
-    tf.summary.image('g_init_image', net_g_test.outputs)
-    tf.summary.image('label_image', labels)
 
-    if mode == tf.estimator.ModeKeys.EVAL:
-        mse_loss = tl.cost.mean_squared_error(net_g_test.outputs, labels, is_mean=True)
-        return tf.estimator.EstimatorSpec(mode, loss=mse_loss)            
-
-    tf.summary.image('g_init_image', net_g.outputs)
     mse_loss = tl.cost.mean_squared_error(net_g.outputs, labels, is_mean=True)
+    tf.summary.scalar('g_init_mse_loss', mse_loss)
     g_vars = tl.layers.get_variables_with_name('SRGAN_g', True, True)
 
     with tf.variable_scope('learning_rate'):
@@ -30,11 +31,9 @@ def g_init_model(features, labels, mode, params):
 
     return tf.estimator.EstimatorSpec(mode, loss=mse_loss, train_op=g_optim_init)
 
-def load_net(net_g, net_d, net_vgg):
+
+def load_vgg(net_vgg):
     sess = tf.get_default_session() 
-    # if tl.files.load_and_assign_npz(sess=sess, name=config.checkpoint_dir + '/g_{}.npz'.format(tl.global_flag['mode']), network=net_g) is False:
-    #     tl.files.load_and_assign_npz(sess=sess, name=config.checkpoint_dir + '/g_{}_init.npz'.format(tl.global_flag['mode']), network=net_g)
-    # tl.files.load_and_assign_npz(sess=sess, name=config.checkpoint_dir + '/d_{}.npz'.format(tl.global_flag['mode']), network=net_d)
 
     vgg19_npy_path = "vgg19.npy"
     if not os.path.isfile(vgg19_npy_path):
@@ -49,6 +48,7 @@ def load_net(net_g, net_d, net_vgg):
         print("  Loading %s: %s, %s" % (val[0], W.shape, b.shape))
         params.extend([W, b])
     tl.files.assign_params(sess, params, net_vgg)
+
 
 def srgan_model(features, labels, mode, params):
     net_g = SRGAN_g(features, is_train=False)
@@ -88,7 +88,7 @@ def srgan_model(features, labels, mode, params):
     d_optim = tf.train.AdamOptimizer(lr_v, beta1=config.TRAIN.beta1).minimize(d_loss, var_list=d_vars)
     joint_op = tf.group([g_optim, d_optim])
 
-    load_net(net_g, net_d, net_vgg)
+    load_vgg(net_vgg)
 
     return tf.estimator.EstimatorSpec(mode, loss=g_loss, train_op=joint_op)
     
@@ -99,33 +99,25 @@ def main(argv):
 
     valid_lr_img_list = read_file_list(config.VALID.lr_img_path)
     valid_hr_img_list = read_file_list(config.VALID.hr_img_path)
+    ni = int(np.sqrt(config.TRAIN.batch_size))
 
-    my_config = tf.estimator.RunConfig(
-        save_summary_steps=1)
-
-    # classifier = tf.estimator.Estimator(
-    #     model_fn=g_init_model,
-    #     config=my_config,
-    #     params={})
-    
-    # classifier.train(
-    #     input_fn=lambda :train_input_fn(train_lr_img_list, train_hr_img_list, 
-    #         config.TRAIN.n_epoch_init))
-    
-    # classifier.evaluate(
-    #     input_fn=lambda :train_input_fn(valid_lr_img_list, valid_hr_img_list, 1))
-    
-    srgan_classifier = tf.estimator.Estimator(
-        model_fn=srgan_model,
-        config=my_config,
+    g_init_classifier = tf.estimator.Estimator(
+        model_fn=g_init_model,
+        model_dir=config.g_checkpoint_dir,
+        config=tf.estimator.RunConfig(model_dir=config.g_checkpoint_dir),
         params={})
+    
+    for epoch in range(config.TRAIN.n_epoch_init):
+        g_init_classifier.train(
+            input_fn=lambda: train_input_fn(train_lr_img_list, train_hr_img_list))
 
-    srgan_classifier.train(
-          input_fn=lambda :train_input_fn(valid_lr_img_list, valid_hr_img_list, 
-            config.TRAIN.n_epoch_init)
-    )
+        if (epoch + 1) % 10 == 0: 
+            result = g_init_classifier.predict(
+                input_fb=lambda: train_input_fn(valid_lr_img_list, valid_hr_img_list))
+            
+            tl.vis.save_images(result, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
+
     
 if __name__ == '__main__':
-    
     tf.logging.set_verbosity(tf.logging.INFO)
     tf.app.run(main)   

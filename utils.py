@@ -24,13 +24,12 @@ def _parse_function(lr_name, hr_name):
 
     return lr_img, hr_img
 
-def train_input_fn(lr_list, hr_list, epoch):    
+def train_input_fn(lr_list, hr_list):    
     return tf.data.Dataset \
         .from_tensor_slices((lr_list, hr_list)) \
         .map(_parse_function) \
         .shuffle(buffer_size=100) \
         .batch(config.TRAIN.batch_size) \
-        .repeat(epoch) \
         .make_one_shot_iterator() \
         .get_next()
         
