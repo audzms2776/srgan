@@ -29,8 +29,14 @@ config.VALID = edict()
 config.VALID.hr_img_path = 'valid/original/'
 config.VALID.lr_img_path = 'valid/resize/'
 
-config.checkpoint_dir = 'checkpoint'
-tl.files.exists_or_mkdir(config.checkpoint_dir)
+## config location
+config.g_checkpoint_dir = './g_checkpoint'
+config.d_checkpoint_dir = './d_checkpoint'
+config.gen_image_dir = './generate'
+
+tl.files.exists_or_mkdir(config.g_checkpoint_dir)
+tl.files.exists_or_mkdir(config.d_checkpoint_dir)
+tl.files.exists_or_mkdir(config.gen_image_dir)
 
 def log_config(filename, cfg):
     with open(filename, 'w') as f:
