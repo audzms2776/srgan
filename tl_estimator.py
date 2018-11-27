@@ -52,8 +52,12 @@ def load_net(net_g, net_d, net_vgg):
 
 def srgan_model(features, labels, mode, params):
     net_g = SRGAN_g(features, is_train=False)
+    net_g_test = SRGAN_g(features, is_train=False)
     net_d, logits_real = SRGAN_d(labels, is_train=True)
     _, logits_fake = SRGAN_d(net_g.outputs, is_train=True)
+
+    tf.summary.image('g_init_image', net_g_test.outputs)
+    tf.summary.image('label_image', labels)
 
     t_target_image_224 = tf.image.resize_images(
         labels, size=[224, 224], method=0,
