@@ -1,5 +1,7 @@
 ## Super Resolution Examples
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/dd654155665b4ebfb27c41b984358939)](https://app.codacy.com/app/audzms2776/srgan?utm_source=github.com&utm_medium=referral&utm_content=audzms2776/srgan&utm_campaign=Badge_Grade_Dashboard)
+
 
 We run this script under [TensorFlow](https://www.tensorflow.org) 1.4 and the [TensorLayer](https://github.com/tensorlayer/tensorlayer) 1.8.0+.
 
