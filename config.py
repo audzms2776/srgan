@@ -1,5 +1,6 @@
 from easydict import EasyDict as edict
 import json
+import tensorlayer as tl
 
 config = edict()
 config.TRAIN = edict()
@@ -27,6 +28,9 @@ config.VALID = edict()
 ## test set location
 config.VALID.hr_img_path = 'valid/original/'
 config.VALID.lr_img_path = 'valid/resize/'
+
+config.checkpoint_dir = 'checkpoint'
+tl.files.exists_or_mkdir(config.checkpoint_dir)
 
 def log_config(filename, cfg):
     with open(filename, 'w') as f:
