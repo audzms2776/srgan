@@ -109,11 +109,11 @@ def main(argv):
     
     for epoch in range(config.TRAIN.n_epoch_init):
         g_init_classifier.train(
-            input_fn=lambda: train_input_fn(train_lr_img_list, train_hr_img_list, config.TRAIN.n_epoch_init))
+            input_fn=lambda: train_input_fn(train_lr_img_list, train_hr_img_list))
 
         if (epoch + 1) % 10 == 0: 
             result = g_init_classifier.predict(
-                input_fb=lambda: train_input_fn(valid_lr_img_list, valid_hr_img_list, 1))
+                input_fb=lambda: train_input_fn(valid_lr_img_list, valid_hr_img_list))
             
             tl.vis.save_images(result, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
 
