@@ -27,7 +27,7 @@ lr_decay = config.TRAIN.lr_decay
 decay_every = config.TRAIN.decay_every
 writer = SummaryWriter()
 
-ni = int(np.sqrt(batch_size))
+ni = int(np.sqrt(batch_size)) + 1
 
 
 def train(mode):
@@ -52,14 +52,9 @@ def train(mode):
     t_image = tf.placeholder('float32', [None, 96, 96, 3], name='t_image_input_to_SRGAN_generator')
     t_target_image = tf.placeholder('float32', [None, 384, 384, 3], name='t_target_image')
 
-    net_g = SRGAN_g(t_image, is_train=True, reuse=False)
-    net_d, logits_real = SRGAN_d(t_target_image, is_train=True, reuse=False)
-    _, logits_fake = SRGAN_d(net_g.outputs, is_train=True, reuse=True)
-
-    net_g.print_params(False)
-    net_g.print_layers()
-    net_d.print_params(False)
-    net_d.print_layers()
+    net_g = SRGAN_g(t_image)
+    net_d, logits_real = SRGAN_d(t_target_image)
+    _, logits_fake = SRGAN_d(net_g.outputs)
 
     ## vgg inference. 0, 1, 2, 3 BILINEAR NEAREST BICUBIC AREA
     t_target_image_224 = tf.image.resize_images(
@@ -67,11 +62,11 @@ def train(mode):
         align_corners=False)  # resize_target_image_for_vgg # http://tensorlayer.readthedocs.io/en/latest/_modules/tensorlayer/layers.html#UpSampling2dLayer
     t_predict_image_224 = tf.image.resize_images(net_g.outputs, size=[224, 224], method=0, align_corners=False)  # resize_generate_image_for_vgg
 
-    net_vgg, vgg_target_emb = Vgg19_simple_api((t_target_image_224 + 1) / 2, reuse=False)
-    _, vgg_predict_emb = Vgg19_simple_api((t_predict_image_224 + 1) / 2, reuse=True)
+    net_vgg, vgg_target_emb = Vgg19_simple_api((t_target_image_224 + 1) / 2)
+    _, vgg_predict_emb = Vgg19_simple_api((t_predict_image_224 + 1) / 2)
 
     ## test inference
-    net_g_test = SRGAN_g(t_image, is_train=False, reuse=True)
+    net_g_test = SRGAN_g(t_image)
 
     # ###========================== DEFINE TRAIN OPS ==========================###
     d_loss1 = tl.cost.sigmoid_cross_entropy(logits_real, tf.ones_like(logits_real), name='d1')
@@ -116,13 +111,11 @@ def train(mode):
         print("  Loading %s: %s, %s" % (val[0], W.shape, b.shape))
         params.extend([W, b])
     tl.files.assign_params(sess, params, net_vgg)
-    # net_vgg.print_params(False)
-    # net_vgg.print_layers()
 
     ###============================= TRAINING ===============================###
     sample_imgs_96 = tl.prepro.threading_data(train_lr_imgs[0:batch_size], fn=normal_img_fn)
 
-    ###========================= initialize G ====================###
+    ##========================= initialize G ====================###
 
     if mode == 'g_init':
         ## fixed learning rate
@@ -137,6 +130,10 @@ def train(mode):
                 step_time = time.time()
                 b_imgs_384 = tl.prepro.threading_data(train_hr_imgs[idx:idx + batch_size], fn=normal_img_fn)
                 b_imgs_96 = tl.prepro.threading_data(train_lr_imgs[idx:idx + batch_size], fn=normal_img_fn)
+
+                if type(b_imgs_384) == list or type(b_imgs_96) == list:
+                    continue 
+
                 ## update G
                 errM, _ = sess.run([mse_loss, g_optim_init],
                     {t_image: b_imgs_96, t_target_image: b_imgs_384})
@@ -150,13 +147,10 @@ def train(mode):
             writer.add_scalar('loss/init', total_mse_loss / n_iter, epoch)
 
             ## quick evaluation on train set
-            if (epoch != 0) and (epoch % 10 == 0):
+            if (epoch != 0) and (epoch % 5 == 0):
                 out = sess.run(net_g_test.outputs, {t_image: sample_imgs_96}) 
                 print("[*] save images")
                 tl.vis.save_images(out, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
-
-            ## save model
-            if (epoch != 0) and (epoch % 10 == 0):
                 tl.files.save_npz(net_g.all_params, name=checkpoint_dir + '/g_{}_init.npz'.format(tl.global_flag['mode']), sess=sess)
             
         writer.close()
@@ -182,6 +176,10 @@ def train(mode):
                 step_time = time.time()
                 b_imgs_384 = tl.prepro.threading_data(train_hr_imgs[idx:idx + batch_size], fn=normal_img_fn)
                 b_imgs_96 = tl.prepro.threading_data(train_lr_imgs[idx:idx + batch_size], fn=normal_img_fn)
+
+                if type(b_imgs_384) == list or type(b_imgs_96) == list:
+                    continue 
+
                 ## update D
                 errD, _ = sess.run([d_loss, d_optim],
                     {t_image: b_imgs_96, t_target_image: b_imgs_384})
@@ -200,13 +198,10 @@ def train(mode):
             writer.add_scalar('loss/d_loss', total_g_loss / n_iter, epoch)
 
             ## quick evaluation on train set
-            if (epoch != 0) and (epoch % 10 == 0):
+            if (epoch != 0) and (epoch % 5 == 0):
                 out = sess.run(net_g_test.outputs, {t_image: sample_imgs_96})
                 print("[*] save images")
                 tl.vis.save_images(out, [ni, ni], save_dir_gan + '/train_%d.png' % epoch)
-
-            ## save model
-            if (epoch != 0) and (epoch % 10 == 0):
                 tl.files.save_npz(net_g.all_params, name=checkpoint_dir + '/g_{}.npz'.format(tl.global_flag['mode']), sess=sess)
                 tl.files.save_npz(net_d.all_params, name=checkpoint_dir + '/d_{}.npz'.format(tl.global_flag['mode']), sess=sess)
 
