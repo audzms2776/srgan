@@ -2,17 +2,16 @@
 # -*- coding: utf8 -*-
 
 import os, time, pickle, random, time
-from datetime import datetime
 import numpy as np
 from time import localtime, strftime
-import logging, scipy
+import scipy
 
 import tensorflow as tf
 import tensorlayer as tl
 from tensorboardX import SummaryWriter
 from model import SRGAN_g, SRGAN_d, Vgg19_simple_api
 from utils import *
-from config import config, log_config
+from config import config
 
 ###====================== HYPER-PARAMETERS ===========================###
 ## Adam
@@ -32,8 +31,8 @@ ni = int(np.sqrt(batch_size)) + 1
 
 def train(mode):
     ## create folders to save result images and trained model
-    save_dir_ginit = "samples/{}_ginit".format(tl.global_flag['mode'])
-    save_dir_gan = "samples/{}_gan".format(tl.global_flag['mode'])
+    save_dir_ginit = "samples/ginit"
+    save_dir_gan = "samples/srgan"
     tl.files.exists_or_mkdir(save_dir_ginit)
     tl.files.exists_or_mkdir(save_dir_gan)
     checkpoint_dir = "checkpoint"  # checkpoint_resize_conv
@@ -92,10 +91,15 @@ def train(mode):
 
     ###========================== RESTORE MODEL =============================###
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=False))
-    tl.layers.initialize_global_variables(sess)
-    if tl.files.load_and_assign_npz(sess=sess, name=checkpoint_dir + '/g_{}.npz'.format(tl.global_flag['mode']), network=net_g) is False:
-        tl.files.load_and_assign_npz(sess=sess, name=checkpoint_dir + '/g_{}_init.npz'.format(tl.global_flag['mode']), network=net_g)
-    tl.files.load_and_assign_npz(sess=sess, name=checkpoint_dir + '/d_{}.npz'.format(tl.global_flag['mode']), network=net_d)
+    init_op = tf.global_variables_initializer()
+    saver = tf.train.Saver()
+    sess.run(init_op)
+    tl.files.load_and_assign_npz(sess=sess, name=checkpoint_dir + '/g_init.npz'.format(tl.global_flag['mode']), network=net_g)
+
+    try:
+        saver.restore(sess, config.srgan_dir + 'model.ckpt')
+    except:
+        print('no checkpoint!')
 
     ###============================= LOAD VGG ===============================###
     vgg19_npy_path = "vgg19.npy"
@@ -151,7 +155,7 @@ def train(mode):
                 out = sess.run(net_g_test.outputs, {t_image: sample_imgs_96}) 
                 print("[*] save images")
                 tl.vis.save_images(out, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
-                tl.files.save_npz(net_g.all_params, name=checkpoint_dir + '/g_{}_init.npz'.format(tl.global_flag['mode']), sess=sess)
+                tl.files.save_npz(net_g.all_params, name=checkpoint_dir + '/g_init.npz'.format(tl.global_flag['mode']), sess=sess)
             
         writer.close()
     else:
@@ -202,8 +206,7 @@ def train(mode):
                 out = sess.run(net_g_test.outputs, {t_image: sample_imgs_96})
                 print("[*] save images")
                 tl.vis.save_images(out, [ni, ni], save_dir_gan + '/train_%d.png' % epoch)
-                tl.files.save_npz(net_g.all_params, name=checkpoint_dir + '/g_{}.npz'.format(tl.global_flag['mode']), sess=sess)
-                tl.files.save_npz(net_d.all_params, name=checkpoint_dir + '/d_{}.npz'.format(tl.global_flag['mode']), sess=sess)
+                saver.save(sess, config.srgan_dir + 'model.ckpt')
 
         writer.close()
 
@@ -247,7 +250,7 @@ def evaluate():
 
     ###========================== RESTORE G =============================###
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=False))
-    tl.layers.initialize_global_variables(sess)
+    sess.run(tf.global_variables_initializer())
     tl.files.load_and_assign_npz(sess=sess, name=checkpoint_dir + '/g_srgan.npz', network=net_g)
 
     ###======================= EVALUATION =============================###
@@ -276,7 +279,7 @@ if __name__ == '__main__':
     tl.global_flag['mode'] = args.mode
 
     if tl.global_flag['mode'] == 'g_init':
-        train('init')
+        train('g_init')
     elif tl.global_flag['mode'] == 'srgan':
         train('srgan')
     elif tl.global_flag['mode'] == 'evaluate':
