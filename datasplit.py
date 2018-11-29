@@ -1,4 +1,3 @@
-from sklearn import datasets, linear_model
 from sklearn.model_selection import train_test_split
 import os 
 import shutil

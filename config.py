@@ -32,11 +32,13 @@ config.VALID.lr_img_path = 'valid/resize/'
 ## config location
 config.g_checkpoint_dir = './g_checkpoint'
 config.d_checkpoint_dir = './d_checkpoint'
-config.gen_image_dir = './generate'
+config.gen_image_dir = './checkpoint/generate'
+config.srgan_dir = './checkpoint/d_srgan/'
 
 tl.files.exists_or_mkdir(config.g_checkpoint_dir)
 tl.files.exists_or_mkdir(config.d_checkpoint_dir)
 tl.files.exists_or_mkdir(config.gen_image_dir)
+tl.files.exists_or_mkdir(config.srgan_dir)
 
 def log_config(filename, cfg):
     with open(filename, 'w') as f:

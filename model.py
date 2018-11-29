@@ -3,7 +3,6 @@
 
 import time
 import tensorflow as tf
-import tensorlayer as tl
 from tensorlayer.layers import *
 from utils import sn_conv, batch_norm
 
@@ -22,7 +21,7 @@ def SRGAN_g(t_image, is_train=False):
     w_init = tf.random_normal_initializer(stddev=0.02)
     b_init = None  # tf.constant_initializer(value=0.0)
     g_init = tf.random_normal_initializer(1., 0.02)
-    with tf.variable_scope("SRGAN_g", reuse=tf.AUTO_REUSE) as vs:
+    with tf.variable_scope("SRGAN_g", reuse=tf.AUTO_REUSE):
         n = InputLayer(t_image, name='in')
         n = Conv2d(n, 64, (3, 3), (1, 1), act=tf.nn.relu, padding='SAME', W_init=w_init, name='n64s1/c')
         temp = n
@@ -101,7 +100,7 @@ def Vgg19_simple_api(rgb):
     rgb : rgb image placeholder [batch, height, width, 3] values scaled [0, 1]
     """
     VGG_MEAN = [103.939, 116.779, 123.68]
-    with tf.variable_scope("VGG19", reuse=tf.AUTO_REUSE) as vs:
+    with tf.variable_scope("VGG19", reuse=tf.AUTO_REUSE):
         start_time = time.time()
         print("build model started")
         rgb_scaled = rgb * 255.0
@@ -130,7 +129,7 @@ def Vgg19_simple_api(rgb):
         assert bgr.get_shape().as_list()[1:] == [224, 224, 3]
         """ input layer """
         net_in = InputLayer(bgr, name='input')
-        """ conv1 """
+        ##  conv1 
         network = Conv2d(net_in, n_filter=64, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv1_1')
         network = Conv2d(network, n_filter=64, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv1_2')
         network = MaxPool2d(network, filter_size=(2, 2), strides=(2, 2), padding='SAME', name='pool1')
