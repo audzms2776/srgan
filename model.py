@@ -135,21 +135,21 @@ def Vgg19_simple_api(rgb):
                     red - VGG_MEAN[2],
                 ], axis=3)
         assert bgr.get_shape().as_list()[1:] == [224, 224, 3]
-        """ input layer """
+        # input layer
         net_in = InputLayer(bgr, name='input')
-        ##  conv1 
+        #  conv1
         network = Conv2d(net_in, n_filter=64, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
                          name='conv1_1')
         network = Conv2d(network, n_filter=64, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
                          name='conv1_2')
         network = MaxPool2d(network, filter_size=(2, 2), strides=(2, 2), padding='SAME', name='pool1')
-        """ conv2 """
+        # conv2 """
         network = Conv2d(network, n_filter=128, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
                          name='conv2_1')
         network = Conv2d(network, n_filter=128, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
                          name='conv2_2')
         network = MaxPool2d(network, filter_size=(2, 2), strides=(2, 2), padding='SAME', name='pool2')
-        """ conv3 """
+        # conv3 """
         network = Conv2d(network, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
                          name='conv3_1')
         network = Conv2d(network, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
@@ -159,7 +159,7 @@ def Vgg19_simple_api(rgb):
         network = Conv2d(network, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
                          name='conv3_4')
         network = MaxPool2d(network, filter_size=(2, 2), strides=(2, 2), padding='SAME', name='pool3')
-        """ conv4 """
+        # conv4 """
         network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
                          name='conv4_1')
         network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
@@ -171,7 +171,7 @@ def Vgg19_simple_api(rgb):
         network = MaxPool2d(network, filter_size=(2, 2), strides=(2, 2), padding='SAME',
                             name='pool4')  # (batch_size, 14, 14, 512)
         conv = network
-        """ conv5 """
+        # conv5 """
         network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
                          name='conv5_1')
         network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
@@ -182,7 +182,7 @@ def Vgg19_simple_api(rgb):
                          name='conv5_4')
         network = MaxPool2d(network, filter_size=(2, 2), strides=(2, 2), padding='SAME',
                             name='pool5')  # (batch_size, 7, 7, 512)
-        """ fc 6~8 """
+        # fc 6~8 """
         network = FlattenLayer(network, name='flatten')
         network = DenseLayer(network, n_units=4096, act=tf.nn.relu, name='fc6')
         network = DenseLayer(network, n_units=4096, act=tf.nn.relu, name='fc7')

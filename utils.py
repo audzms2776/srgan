@@ -80,10 +80,8 @@ def spectral_norm(w, iteration=1):
     u_hat = u
     v_hat = None
     for i in range(iteration):
-        """
-        power iteration
-        Usually iteration = 1 will be enough
-        """
+        # power iteration
+        # Usually iteration = 1 will be enough
         v_ = tf.matmul(u_hat, tf.transpose(w))
         v_hat = l2_norm(v_)
 
