@@ -51,9 +51,9 @@ def train(mode):
     t_image = tf.placeholder('float32', [None, 96, 96, 3], name='t_image_input_to_SRGAN_generator')
     t_target_image = tf.placeholder('float32', [None, 384, 384, 3], name='t_target_image')
 
-    net_g = SRGAN_g(t_image)
-    net_d, logits_real = SRGAN_d(t_target_image)
-    _, logits_fake = SRGAN_d(net_g.outputs)
+    net_g = SRGAN_g(t_image, is_train=True)
+    net_d, logits_real = SRGAN_d(t_target_image, is_train=True)
+    _, logits_fake = SRGAN_d(net_g.outputs, is_train=True)
 
     ## vgg inference. 0, 1, 2, 3 BILINEAR NEAREST BICUBIC AREA
     t_target_image_224 = tf.image.resize_images(
@@ -65,7 +65,7 @@ def train(mode):
     _, vgg_predict_emb = Vgg19_simple_api((t_predict_image_224 + 1) / 2)
 
     ## test inference
-    net_g_test = SRGAN_g(t_image)
+    net_g_test = SRGAN_g(t_image, is_train=False)
 
     # ###========================== DEFINE TRAIN OPS ==========================###
     d_loss1 = tl.cost.sigmoid_cross_entropy(logits_real, tf.ones_like(logits_real), name='d1')
