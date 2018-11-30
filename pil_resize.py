@@ -1,14 +1,15 @@
-from PIL import Image, ImageOps, ImageCms
-from random import randrange
-from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor
+import io
 import os
-import io 
+from concurrent.futures import ThreadPoolExecutor
+
+from PIL import Image, ImageOps, ImageCms
+from tqdm import tqdm
 
 original_path = 'original'
 resize_path = 'resize'
 folder_arr = next(os.walk('.'))[1]
 pbar = None
+
 
 def convert_to_srgb(img):
     icc = img.info.get('icc_profile', '')
@@ -19,6 +20,7 @@ def convert_to_srgb(img):
         img = ImageCms.profileToProfile(img, sPrf, dPrf)
     return img
 
+
 def random_crop(x):
     folder = x['folder']
     image_name = x['image_name']
@@ -28,23 +30,24 @@ def random_crop(x):
         fit_img_h = ImageOps.fit(img1, (384, 384), Image.ANTIALIAS)
         fit_img_h = convert_to_srgb(fit_img_h)
         h_name = '{}/{}_{}.png'.format(original_path, folder, image_name.split('.')[0])
-        fit_img_h.save(h_name, format='PNG', icc_profile=fit_img_h.info.get('icc_profile',''))
-        
+        fit_img_h.save(h_name, format='PNG', icc_profile=fit_img_h.info.get('icc_profile', ''))
+
         fit_img_l = ImageOps.fit(img1, (96, 96), Image.ANTIALIAS)
         fit_img_l = convert_to_srgb(fit_img_l)
         l_name = '{}/{}_{}.png'.format(resize_path, folder, image_name.split('.')[0])
-        fit_img_l.save(l_name, format='PNG', icc_profile=fit_img_l.info.get('icc_profile',''))
+        fit_img_l.save(l_name, format='PNG', icc_profile=fit_img_l.info.get('icc_profile', ''))
     except:
         pass
-    
+
     pbar.update(1)
+
 
 if __name__ == "__main__":
     arr = []
 
     for folder in folder_arr:
         img_names = os.listdir(folder)
-        
+
         for name in img_names:
             arr.append({'folder': folder, 'image_name': name})
 

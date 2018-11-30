@@ -1,10 +1,9 @@
 import tensorlayer as tl
-import tensorflow as tf 
-from config import config, log_config
-from utils import *
-from model import SRGAN_g, SRGAN_d, Vgg19_simple_api
 
-    
+from model import SRGAN_g, SRGAN_d, Vgg19_simple_api
+from utils import *
+
+
 # features: lr_list
 # labels: hr_list
 def g_init_model(features, labels, mode, params):
@@ -15,7 +14,7 @@ def g_init_model(features, labels, mode, params):
             'generated_images': net_g_test.outputs
         }
 
-        return tf.estimator.EstimatorSpec(mode, predictions=predictions)            
+        return tf.estimator.EstimatorSpec(mode, predictions=predictions)
 
     net_g = SRGAN_g(features, is_train=True)
 
@@ -27,13 +26,13 @@ def g_init_model(features, labels, mode, params):
         lr_v = tf.Variable(config.TRAIN.lr_init, trainable=False)
 
     g_optim_init = tf.train.AdamOptimizer(lr_v, beta1=config.TRAIN.beta1) \
-                            .minimize(mse_loss, var_list=g_vars, global_step=tf.train.get_global_step())
+        .minimize(mse_loss, var_list=g_vars, global_step=tf.train.get_global_step())
 
     return tf.estimator.EstimatorSpec(mode, loss=mse_loss, train_op=g_optim_init)
 
 
 def load_vgg(net_vgg):
-    sess = tf.get_default_session() 
+    sess = tf.get_default_session()
 
     vgg19_npy_path = "vgg19.npy"
     if not os.path.isfile(vgg19_npy_path):
@@ -62,7 +61,8 @@ def srgan_model(features, labels, mode, params):
     t_target_image_224 = tf.image.resize_images(
         labels, size=[224, 224], method=0,
         align_corners=False)  # resize_target_image_for_vgg # http://tensorlayer.readthedocs.io/en/latest/_modules/tensorlayer/layers.html#UpSampling2dLayer
-    t_predict_image_224 = tf.image.resize_images(net_g.outputs, size=[224, 224], method=0, align_corners=False)  # resize_generate_image_for_vgg
+    t_predict_image_224 = tf.image.resize_images(net_g.outputs, size=[224, 224], method=0,
+                                                 align_corners=False)  # resize_generate_image_for_vgg
 
     net_vgg, vgg_target_emb = Vgg19_simple_api((t_target_image_224 + 1) / 2)
     _, vgg_predict_emb = Vgg19_simple_api((t_predict_image_224 + 1) / 2)
@@ -82,7 +82,7 @@ def srgan_model(features, labels, mode, params):
 
     with tf.variable_scope('learning_rate'):
         lr_v = tf.Variable(config.TRAIN.lr_init, trainable=False)
-        
+
     ## SRGAN
     g_optim = tf.train.AdamOptimizer(lr_v, beta1=config.TRAIN.beta1).minimize(g_loss, var_list=g_vars)
     d_optim = tf.train.AdamOptimizer(lr_v, beta1=config.TRAIN.beta1).minimize(d_loss, var_list=d_vars)
@@ -91,7 +91,7 @@ def srgan_model(features, labels, mode, params):
     load_vgg(net_vgg)
 
     return tf.estimator.EstimatorSpec(mode, loss=g_loss, train_op=joint_op)
-    
+
 
 def main(argv):
     train_lr_img_list = read_file_list(config.TRAIN.lr_img_path)
@@ -99,25 +99,25 @@ def main(argv):
 
     valid_lr_img_list = read_file_list(config.VALID.lr_img_path)
     valid_hr_img_list = read_file_list(config.VALID.hr_img_path)
-    ni = int(np.sqrt(config.TRAIN.batch_size))
+    ni = int(np.sqrt(config.TRAIN.batch_size)) + 1
 
     g_init_classifier = tf.estimator.Estimator(
         model_fn=g_init_model,
         model_dir=config.g_checkpoint_dir,
         config=tf.estimator.RunConfig(model_dir=config.g_checkpoint_dir),
         params={})
-    
+
     for epoch in range(config.TRAIN.n_epoch_init):
         g_init_classifier.train(
             input_fn=lambda: train_input_fn(train_lr_img_list, train_hr_img_list))
 
-        if (epoch + 1) % 10 == 0: 
+        if (epoch + 1) % 10 == 0:
             result = g_init_classifier.predict(
-                input_fb=lambda: train_input_fn(valid_lr_img_list, valid_hr_img_list))
-            
-            tl.vis.save_images(result, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
+                input_fn=lambda: train_input_fn(valid_lr_img_list, valid_hr_img_list))
 
-    
+            tl.vis.save_images(result['generated_images'], [ni, ni], config.gen_image_dir + '/train_%d.png' % epoch)
+
+
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
-    tf.app.run(main)   
+    tf.app.run(main)
