@@ -113,9 +113,14 @@ def Vgg19_simple_api(rgb):
         else:  # TF 1.0
             # print(rgb_scaled)
             red, green, blue = tf.split(rgb_scaled, 3, 3)
-        assert red.get_shape().as_list()[1:] == [224, 224, 1]
-        assert green.get_shape().as_list()[1:] == [224, 224, 1]
-        assert blue.get_shape().as_list()[1:] == [224, 224, 1]
+
+        condition1 = red.get_shape().as_list()[1:] == [224, 224, 1]
+        condition2 = green.get_shape().as_list()[1:] == [224, 224, 1]
+        condition3 = blue.get_shape().as_list()[1:] == [224, 224, 1]
+
+        if not condition1 or not condition2 or not condition3:
+            raise AssertionError()
+
         if tf.__version__ <= '0.11':
             bgr = tf.concat(3, [
                 blue - VGG_MEAN[0],

@@ -37,7 +37,7 @@ def random_crop(x):
         l_name = '{}/{}_{}.png'.format(resize_path, folder, image_name.split('.')[0])
         fit_img_l.save(l_name, format='PNG', icc_profile=fit_img_l.info.get('icc_profile', ''))
     except:
-        pass
+        print('except filename: {}'.format(image_name))
 
     pbar.update(1)
 
