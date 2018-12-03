@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorlayer.layers import *
 from utils import sn_conv, batch_norm
 
+
 # from tensorflow.python.ops import variable_scope as vs
 # from tensorflow.python.ops import math_ops, init_ops, array_ops, nn
 # from tensorflow.python.util import nest
@@ -28,9 +29,11 @@ def SRGAN_g(t_image, is_train=False):
 
         # B residual blocks
         for i in range(16):
-            nn = Conv2d(n, 64, (3, 3), (1, 1), act=None, padding='SAME', W_init=w_init, b_init=b_init, name='n64s1/c1/%s' % i)
+            nn = Conv2d(n, 64, (3, 3), (1, 1), act=None, padding='SAME', W_init=w_init, b_init=b_init,
+                        name='n64s1/c1/%s' % i)
             nn = BatchNormLayer(nn, act=tf.nn.relu, is_train=is_train, gamma_init=g_init, name='n64s1/b1/%s' % i)
-            nn = Conv2d(nn, 64, (3, 3), (1, 1), act=None, padding='SAME', W_init=w_init, b_init=b_init, name='n64s1/c2/%s' % i)
+            nn = Conv2d(nn, 64, (3, 3), (1, 1), act=None, padding='SAME', W_init=w_init, b_init=b_init,
+                        name='n64s1/c2/%s' % i)
             nn = BatchNormLayer(nn, is_train=is_train, gamma_init=g_init, name='n64s1/b2/%s' % i)
             nn = ElementwiseLayer([n, nn], tf.add, name='b_residual_add/%s' % i)
             n = nn
@@ -110,9 +113,14 @@ def Vgg19_simple_api(rgb):
         else:  # TF 1.0
             # print(rgb_scaled)
             red, green, blue = tf.split(rgb_scaled, 3, 3)
-        assert red.get_shape().as_list()[1:] == [224, 224, 1]
-        assert green.get_shape().as_list()[1:] == [224, 224, 1]
-        assert blue.get_shape().as_list()[1:] == [224, 224, 1]
+
+        condition1 = red.get_shape().as_list()[1:] == [224, 224, 1]
+        condition2 = green.get_shape().as_list()[1:] == [224, 224, 1]
+        condition3 = blue.get_shape().as_list()[1:] == [224, 224, 1]
+
+        if not condition1 or not condition2 or not condition3:
+            raise AssertionError()
+
         if tf.__version__ <= '0.11':
             bgr = tf.concat(3, [
                 blue - VGG_MEAN[0],
@@ -127,40 +135,57 @@ def Vgg19_simple_api(rgb):
                     red - VGG_MEAN[2],
                 ], axis=3)
         assert bgr.get_shape().as_list()[1:] == [224, 224, 3]
-        """ input layer """
+        # input layer
         net_in = InputLayer(bgr, name='input')
-        ##  conv1 
-        network = Conv2d(net_in, n_filter=64, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv1_1')
-        network = Conv2d(network, n_filter=64, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv1_2')
+        #  conv1
+        network = Conv2d(net_in, n_filter=64, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv1_1')
+        network = Conv2d(network, n_filter=64, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv1_2')
         network = MaxPool2d(network, filter_size=(2, 2), strides=(2, 2), padding='SAME', name='pool1')
-        """ conv2 """
-        network = Conv2d(network, n_filter=128, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv2_1')
-        network = Conv2d(network, n_filter=128, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv2_2')
+        # conv2 """
+        network = Conv2d(network, n_filter=128, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv2_1')
+        network = Conv2d(network, n_filter=128, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv2_2')
         network = MaxPool2d(network, filter_size=(2, 2), strides=(2, 2), padding='SAME', name='pool2')
-        """ conv3 """
-        network = Conv2d(network, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv3_1')
-        network = Conv2d(network, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv3_2')
-        network = Conv2d(network, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv3_3')
-        network = Conv2d(network, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv3_4')
+        # conv3 """
+        network = Conv2d(network, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv3_1')
+        network = Conv2d(network, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv3_2')
+        network = Conv2d(network, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv3_3')
+        network = Conv2d(network, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv3_4')
         network = MaxPool2d(network, filter_size=(2, 2), strides=(2, 2), padding='SAME', name='pool3')
-        """ conv4 """
-        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv4_1')
-        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv4_2')
-        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv4_3')
-        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv4_4')
-        network = MaxPool2d(network, filter_size=(2, 2), strides=(2, 2), padding='SAME', name='pool4')  # (batch_size, 14, 14, 512)
+        # conv4 """
+        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv4_1')
+        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv4_2')
+        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv4_3')
+        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv4_4')
+        network = MaxPool2d(network, filter_size=(2, 2), strides=(2, 2), padding='SAME',
+                            name='pool4')  # (batch_size, 14, 14, 512)
         conv = network
-        """ conv5 """
-        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv5_1')
-        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv5_2')
-        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv5_3')
-        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv5_4')
-        network = MaxPool2d(network, filter_size=(2, 2), strides=(2, 2), padding='SAME', name='pool5')  # (batch_size, 7, 7, 512)
-        """ fc 6~8 """
+        # conv5 """
+        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv5_1')
+        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv5_2')
+        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv5_3')
+        network = Conv2d(network, n_filter=512, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME',
+                         name='conv5_4')
+        network = MaxPool2d(network, filter_size=(2, 2), strides=(2, 2), padding='SAME',
+                            name='pool5')  # (batch_size, 7, 7, 512)
+        # fc 6~8 """
         network = FlattenLayer(network, name='flatten')
         network = DenseLayer(network, n_units=4096, act=tf.nn.relu, name='fc6')
         network = DenseLayer(network, n_units=4096, act=tf.nn.relu, name='fc7')
         network = DenseLayer(network, n_units=1000, act=tf.identity, name='fc8')
         print("build model finished: %fs" % (time.time() - start_time))
         return network, conv
-

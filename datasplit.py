@@ -1,12 +1,14 @@
 from sklearn.model_selection import train_test_split
-import os 
+import os
 import shutil
 
-def read_dir_imgs(dir_name):
+
+def read_dir_img(dir_name):
     return [dir_name + x for x in os.listdir(dir_name)]
 
-original_imgs = read_dir_imgs('./original/')
-resize_imgs = read_dir_imgs('./resize/')
+
+original_imgs = read_dir_img('./original/')
+resize_imgs = read_dir_img('./resize/')
 
 o_train, o_test, r_train, r_test = train_test_split(original_imgs, resize_imgs, test_size=0.2)
 
