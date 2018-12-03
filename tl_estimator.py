@@ -8,6 +8,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('mode', 'init',
                     'One of ["init", "srgan"]. ')
 
+load_flag = True
+
 
 # features: lr_list
 # labels: hr_list
@@ -37,6 +39,8 @@ def g_init_model(features, labels, mode, params):
 
 
 def srgan_model(features, labels, mode, params):
+    global load_flag
+
     if mode == tf.estimator.ModeKeys.PREDICT:
         net_g_test = SRGAN_g(features, is_train=False)
 
@@ -62,12 +66,14 @@ def srgan_model(features, labels, mode, params):
     d_loss1 = tl.cost.sigmoid_cross_entropy(logits_real, tf.ones_like(logits_real), name='d1')
     d_loss2 = tl.cost.sigmoid_cross_entropy(logits_fake, tf.zeros_like(logits_fake), name='d2')
     d_loss = d_loss1 + d_loss2
+    tf.summary.scalar('d_loss', d_loss)
 
     g_gan_loss = 1e-3 * tl.cost.sigmoid_cross_entropy(logits_fake, tf.ones_like(logits_fake), name='g')
     mse_loss = tl.cost.mean_squared_error(net_g.outputs, labels, is_mean=True)
     vgg_loss = 2e-6 * tl.cost.mean_squared_error(vgg_predict_emb.outputs, vgg_target_emb.outputs, is_mean=True)
 
     g_loss = mse_loss + vgg_loss + g_gan_loss
+    tf.summary.scalar('g_loss', g_loss)
 
     g_vars = tl.layers.get_variables_with_name('SRGAN_g', True, True)
     d_vars = tl.layers.get_variables_with_name('SRGAN_d', True, True)
@@ -76,12 +82,18 @@ def srgan_model(features, labels, mode, params):
         lr_v = tf.Variable(config.TRAIN.lr_init, trainable=False)
 
     # SRGAN
-    g_optim = tf.train.AdamOptimizer(lr_v, beta1=config.TRAIN.beta1).minimize(g_loss, var_list=g_vars)
-    d_optim = tf.train.AdamOptimizer(lr_v, beta1=config.TRAIN.beta1).minimize(d_loss, var_list=d_vars)
+    g_optim = tf.train.AdamOptimizer(lr_v, beta1=config.TRAIN.beta1) \
+        .minimize(g_loss, var_list=g_vars, global_step=tf.train.get_global_step())
+    d_optim = tf.train.AdamOptimizer(lr_v, beta1=config.TRAIN.beta1) \
+        .minimize(d_loss, var_list=d_vars, global_step=tf.train.get_global_step())
+
     joint_op = tf.group([g_optim, d_optim])
 
     load_vgg(net_vgg)
-    load_g_init(net_g)
+
+    if load_flag:
+        load_g_init(net_g)
+        load_flag = False
 
     return tf.estimator.EstimatorSpec(mode, loss=g_loss, train_op=joint_op)
 
