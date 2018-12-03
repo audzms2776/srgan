@@ -1,10 +1,31 @@
 import os
-
+import numpy as np
 import tensorflow as tf
 
 from config import config
+from PIL import Image
 
 weight_init = tf.random_normal_initializer(mean=0.0, stddev=0.02)
+
+
+def save_predict_img(gen_iter, epoch):
+    images = [p['generated_images'][:, :, :] for p in gen_iter]
+    image_rows = [np.concatenate(images[i:i + 10], axis=0)
+                  for i in range(0, config.NUM_VIZ_IMAGES, 10)]
+    tiled_image = np.concatenate(image_rows, axis=1)
+
+    img = convert_array_to_image(tiled_image)
+
+    file_obj = tf.gfile.Open(
+        os.path.join(config.gen_image_dir, 'gen_%s.png' % (epoch)), 'w')
+    img.save(file_obj, format='png')
+
+    print('saving image {}'.format(epoch))
+
+
+def convert_array_to_image(array):
+    img = Image.fromarray(np.uint8((array + 1.0) / 2.0 * 255), mode='RGB')
+    return img
 
 
 def read_file_list(img_dir):

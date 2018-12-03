@@ -1,5 +1,5 @@
 import tensorlayer as tl
-
+import numpy as np
 from model import SRGAN_g, SRGAN_d, Vgg19_simple_api
 from utils import *
 
@@ -83,7 +83,7 @@ def srgan_model(features, labels, mode, params):
     with tf.variable_scope('learning_rate'):
         lr_v = tf.Variable(config.TRAIN.lr_init, trainable=False)
 
-    ## SRGAN
+    # SRGAN
     g_optim = tf.train.AdamOptimizer(lr_v, beta1=config.TRAIN.beta1).minimize(g_loss, var_list=g_vars)
     d_optim = tf.train.AdamOptimizer(lr_v, beta1=config.TRAIN.beta1).minimize(d_loss, var_list=d_vars)
     joint_op = tf.group([g_optim, d_optim])
@@ -99,7 +99,6 @@ def main(argv):
 
     valid_lr_img_list = read_file_list(config.VALID.lr_img_path)
     valid_hr_img_list = read_file_list(config.VALID.hr_img_path)
-    ni = int(np.sqrt(config.TRAIN.batch_size)) + 1
 
     g_init_classifier = tf.estimator.Estimator(
         model_fn=g_init_model,
@@ -112,10 +111,9 @@ def main(argv):
             input_fn=lambda: train_input_fn(train_lr_img_list, train_hr_img_list))
 
         if (epoch + 1) % 10 == 0:
-            result = g_init_classifier.predict(
+            generated_iter = g_init_classifier.predict(
                 input_fn=lambda: train_input_fn(valid_lr_img_list, valid_hr_img_list))
-
-            tl.vis.save_images(result['generated_images'], [ni, ni], config.gen_image_dir + '/train_%d.png' % epoch)
+            save_predict_img(generated_iter, epoch)
 
 
 if __name__ == '__main__':
