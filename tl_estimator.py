@@ -1,6 +1,7 @@
 from absl import flags
-from model import SRGAN_g, SRGAN_d, Vgg19_simple_api
+from model import SRGAN_g, SRGAN_d, Vgg19_simple_api, load_g_init, save_g, load_vgg
 from utils import *
+import tensorlayer as tl
 
 FLAGS = flags.FLAGS
 

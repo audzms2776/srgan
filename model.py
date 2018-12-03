@@ -4,15 +4,42 @@
 import time
 import tensorflow as tf
 from tensorlayer.layers import *
+import tensorlayer as tl
+import numpy as np
+import os
 from utils import sn_conv, batch_norm
 
 
-# from tensorflow.python.ops import variable_scope as vs
-# from tensorflow.python.ops import math_ops, init_ops, array_ops, nn
-# from tensorflow.python.util import nest
-# from tensorflow.contrib.rnn.python.ops import core_rnn_cell
+def load_g_init(g):
+    sess = tf.get_default_session()
+    load_params = tl.files.load_npz(path='', name='checkpoint/g.npz')
+    tl.files.assign_params(sess, load_params, g)
+    print('load G!')
 
-# https://github.com/david-gpu/srez/blob/master/srez_model.py
+
+def save_g():
+    t_image = tf.placeholder('float32', [None, 96, 96, 3], name='temp_placeholder')
+    mm = SRGAN_g(t_image, is_train=True)
+    tl.files.save_npz(mm.all_params, name='checkpoint/g.npz')
+    print('save G!')
+
+
+def load_vgg(net_vgg):
+    sess = tf.get_default_session()
+
+    vgg19_npy_path = "vgg19.npy"
+    if not os.path.isfile(vgg19_npy_path):
+        print("Please download vgg19.npz from : https://github.com/machrisaa/tensorflow-vgg")
+        exit()
+    npz = np.load(vgg19_npy_path, encoding='latin1').item()
+
+    params = []
+    for val in sorted(npz.items()):
+        W = np.asarray(val[1][0])
+        b = np.asarray(val[1][1])
+        print("  Loading %s: %s, %s" % (val[0], W.shape, b.shape))
+        params.extend([W, b])
+    tl.files.assign_params(sess, params, net_vgg)
 
 
 def SRGAN_g(t_image, is_train=False):
