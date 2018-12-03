@@ -1,14 +1,48 @@
 import os
 import numpy as np
 import tensorflow as tf
+import tensorlayer as tl
 
 from config import config
 from PIL import Image
+from model import SRGAN_g
 
 weight_init = tf.random_normal_initializer(mean=0.0, stddev=0.02)
 
 
-def save_predict_img(gen_iter, epoch):
+def load_g_init(g):
+    sess = tf.get_default_session()
+    load_params = tl.files.load_npz(path='', name='checkpoint/g.npz')
+    tl.files.assign_params(sess, load_params, g)
+    print('load G!')
+
+
+def save_g():
+    t_image = tf.placeholder('float32', [None, 96, 96, 3], name='temp_placeholder')
+    mm = SRGAN_g(t_image, is_train=True)
+    tl.files.save_npz(mm.all_params, name='checkpoint/g.npz')
+    print('save G!')
+
+
+def load_vgg(net_vgg):
+    sess = tf.get_default_session()
+
+    vgg19_npy_path = "vgg19.npy"
+    if not os.path.isfile(vgg19_npy_path):
+        print("Please download vgg19.npz from : https://github.com/machrisaa/tensorflow-vgg")
+        exit()
+    npz = np.load(vgg19_npy_path, encoding='latin1').item()
+
+    params = []
+    for val in sorted(npz.items()):
+        W = np.asarray(val[1][0])
+        b = np.asarray(val[1][1])
+        print("  Loading %s: %s, %s" % (val[0], W.shape, b.shape))
+        params.extend([W, b])
+    tl.files.assign_params(sess, params, net_vgg)
+
+
+def save_predict_img(gen_iter, epoch, mode):
     images = [p['generated_images'][:, :, :] for p in gen_iter]
     image_rows = [np.concatenate(images[i:i + 10], axis=0)
                   for i in range(0, config.NUM_VIZ_IMAGES, 10)]
@@ -17,7 +51,7 @@ def save_predict_img(gen_iter, epoch):
     img = convert_array_to_image(tiled_image)
 
     file_obj = tf.gfile.Open(
-        os.path.join(config.gen_image_dir, 'gen_%s.png' % (epoch)), 'w')
+        os.path.join(config.gen_image_dir, '{}_gen_{}.png'.format(mode, epoch)), 'w')
     img.save(file_obj, format='png')
 
     print('saving image {}'.format(epoch))
