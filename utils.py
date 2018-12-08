@@ -23,10 +23,11 @@ def read_file_list(img_dir):
 
 
 def read_tf_img(name, size):
-    temp = tf.read_file(name)
+    temp = tf.read_file(config.gs_dir + name)
     temp = tf.image.decode_image(temp, channels=3)
-    temp = tf.image.per_image_standardization(temp)
     temp = tf.reshape(temp, [size, size, 3])
+    temp = tf.cast(temp, tf.float32)
+    temp = tf.math.l2_normalize(temp)
 
     return temp
 
@@ -38,6 +39,12 @@ def _parse_function(lr_name, hr_name):
     return lr_img, hr_img
 
 
+def _predict_parse(lr_name):
+    lr_img = read_tf_img(lr_name, 96)
+
+    return lr_img
+
+
 def train_input_fn(lr_list, hr_list):
     return tf.data.Dataset \
         .from_tensor_slices((lr_list, hr_list)) \
@@ -46,6 +53,30 @@ def train_input_fn(lr_list, hr_list):
         .batch(config.TRAIN.batch_size) \
         .make_one_shot_iterator() \
         .get_next()
+
+
+def make_input_fn(lr_list, hr_list):
+    def input_fn(params):
+        return tf.data.Dataset \
+            .from_tensor_slices((lr_list, hr_list)) \
+            .map(_parse_function) \
+            .shuffle(buffer_size=100) \
+            .repeat() \
+            .batch(params["batch_size"], drop_remainder=True) \
+            .make_one_shot_iterator() \
+            .get_next()
+
+    return input_fn
+
+
+def make_predict_input_fn(lr_list):
+    def input_fn(params):
+        return tf.data.Dataset \
+            .from_tensor_slices(lr_list) \
+            .map(_predict_parse) \
+            .batch(params['batch_size'], drop_remainder=True)
+
+    return input_fn
 
 
 def normal_img_fn(x):

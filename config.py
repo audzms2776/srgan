@@ -29,9 +29,14 @@ config.VALID = edict()
 config.VALID.hr_img_path = 'valid/original/'
 config.VALID.lr_img_path = 'valid/resize/'
 
+# tpu location
+config.gs_dir = 'gs://srganimagedata/data/'
+
 # config location
 config.init_checkpoint_dir = './init_checkpoint/'
 config.srgan_checkpoint_dir = './srgan_checkpoint/'
+config.tpu_init_dir = 'gs://srganimagedata/tes1'
+config.tpu_srgan_dir = 'gs://srganimagedata/pre'
 config.gen_image_dir = './checkpoint/generate/'
 config.srgan_dir = './checkpoint/d_srgan/'
 
