@@ -23,11 +23,11 @@ def read_file_list(img_dir):
 
 
 def read_tf_img(name, size):
-    temp = tf.read_file(config.gs_dir + name)
+    temp = tf.read_file(name)
     temp = tf.image.decode_image(temp, channels=3)
     temp = tf.reshape(temp, [size, size, 3])
     temp = tf.cast(temp, tf.float32)
-    temp = tf.math.l2_normalize(temp)
+    temp = tf.image.per_image_standardization(temp)
 
     return temp
 
@@ -48,9 +48,20 @@ def _predict_parse(lr_name):
 def train_input_fn(lr_list, hr_list):
     return tf.data.Dataset \
         .from_tensor_slices((lr_list, hr_list)) \
-        .map(_parse_function) \
-        .shuffle(buffer_size=100) \
+        .map(_parse_function, num_parallel_calls=4) \
         .batch(config.TRAIN.batch_size) \
+        .prefetch(buffer_size=config.TRAIN.batch_size) \
+        .repeat() \
+        .make_one_shot_iterator() \
+        .get_next()
+
+
+def predict_input_fn(lr_list):
+    return tf.data.Dataset \
+        .from_tensor_slices(lr_list) \
+        .map(_predict_parse, num_parallel_calls=4) \
+        .batch(config.TRAIN.batch_size) \
+        .repeat() \
         .make_one_shot_iterator() \
         .get_next()
 
