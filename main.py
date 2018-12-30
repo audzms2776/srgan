@@ -37,12 +37,12 @@ def train(mode):
     tl.files.exists_or_mkdir(checkpoint_dir)
 
     ###====================== PRE-LOAD DATA ===========================###
-    train_hr_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.hr_img_path, regx='.*.png', printable=False))
-    train_lr_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.lr_img_path, regx='.*.png', printable=False))
+    train_data = (read_file_list(config.TRAIN.lr_img_path), read_file_list(config.TRAIN.hr_img_path))
+    valid_data = (read_file_list(config.VALID.lr_img_path), read_file_list(config.VALID.hr_img_path))
 
     ## If your machine have enough memory, please pre-load the whole train set.
-    train_hr_imgs = tl.vis.read_images(train_hr_img_list, path=config.TRAIN.hr_img_path, n_threads=32)
-    train_lr_imgs = tl.vis.read_images(train_lr_img_list, path=config.TRAIN.lr_img_path, n_threads=32)
+    train_iter = train_input_fn(train_data[0], train_data[1])
+    valid_iter = predict_input_fn(valid_data[0][:15])
 
     ###========================== DEFINE MODEL ============================###
     ## train inference
@@ -105,12 +105,12 @@ def train(mode):
     ###============================= LOAD VGG ===============================###
     vgg_target_emb.restore_params(sess)
 
-    ###============================= TRAINING ===============================###
-    sample_imgs_96 = tl.prepro.threading_data(train_lr_imgs[0:batch_size], fn=normal_img_fn)
-
     ##========================= initialize G ====================###
-
+    
     if mode == 'g_init':
+        temp_truth = sess.run(valid_iter)
+        tl.vis.save_images(temp_truth, [4, 4], save_dir_ginit + '/truth.png')
+
         # fixed learning rate
         sess.run(tf.assign(lr_v, lr_init))
         print(" ** fixed learning rate: %f (for init G)" % lr_init)
@@ -119,15 +119,10 @@ def train(mode):
             total_mse_loss, n_iter = 0, 0
 
             # If your machine have enough memory, please pre-load the whole train set.
-            for idx in range(0, len(train_hr_imgs), batch_size):
+            for idx in range(0, len(train_data[0]), batch_size):
                 step_time = time.time()
-                b_imgs_384 = tl.prepro.threading_data(train_hr_imgs[idx:idx + batch_size], fn=normal_img_fn)
-                b_imgs_96 = tl.prepro.threading_data(train_lr_imgs[idx:idx + batch_size], fn=normal_img_fn)
+                b_imgs_96, b_imgs_384 = sess.run(train_iter)
 
-                if isinstance(b_imgs_384, list) or isinstance(b_imgs_96, list):
-                    continue
-
-                    # update G
                 errM, _ = sess.run([mse_loss, g_optim_init],
                                    {t_image: b_imgs_96, t_target_image: b_imgs_384})
 
@@ -143,7 +138,9 @@ def train(mode):
 
             # quick evaluation on train set
             if (epoch != 0) and (epoch % 5 == 0):
-                out = sess.run(net_g_test.outputs, {t_image: sample_imgs_96})
+                p_imgs_96 = sess.run(valid_iter)
+
+                out = sess.run(net_g_test.outputs, {t_image: p_imgs_96})
                 print("[*] save images")
                 tl.vis.save_images(out, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
                 tl.files.save_npz(net_g.all_params, name=checkpoint_dir + '/g_init.npz'.format(tl.global_flag['mode']),
@@ -152,6 +149,9 @@ def train(mode):
         writer.close()
     else:
         ###========================= train GAN (SRGAN) =========================###
+        temp_truth = sess.run(valid_iter)
+        tl.vis.save_images(temp_truth, [4, 4], save_dir_gan + '/truth.png')
+
         for epoch in range(0, n_epoch + 1):
             ## update learning rate
             if epoch != 0 and (epoch % decay_every == 0):
@@ -168,13 +168,9 @@ def train(mode):
             total_d_loss, total_g_loss, n_iter = 0, 0, 0
 
             # If your machine have enough memory, please pre-load the whole train set.
-            for idx in range(0, len(train_hr_imgs), batch_size):
+            for idx in range(0, len(train_data[0]), batch_size):
                 step_time = time.time()
-                b_imgs_384 = tl.prepro.threading_data(train_hr_imgs[idx:idx + batch_size], fn=normal_img_fn)
-                b_imgs_96 = tl.prepro.threading_data(train_lr_imgs[idx:idx + batch_size], fn=normal_img_fn)
-
-                if isinstance(b_imgs_384, list) or isinstance(b_imgs_96, list):
-                    continue
+                b_imgs_96, b_imgs_384 = sess.run(train_iter)
 
                     # update D
                 errD, _ = sess.run([d_loss, d_optim],
@@ -197,7 +193,8 @@ def train(mode):
 
             ## quick evaluation on train set
             if (epoch != 0) and (epoch % 5 == 0):
-                out = sess.run(net_g_test.outputs, {t_image: sample_imgs_96})
+                p_imgs_96 = sess.run(valid_iter)
+                out = sess.run(net_g_test.outputs, {t_image: p_imgs_96})
                 print("[*] save images")
                 tl.vis.save_images(out, [ni, ni], save_dir_gan + '/train_%d.png' % epoch)
                 saver.save(sess, config.srgan_dir + 'model.ckpt')
