@@ -25,8 +25,8 @@ def read_file_list(img_dir):
 def read_tf_img(name, size):
     temp = tf.read_file(name)
     temp = tf.image.decode_image(temp, channels=3)
-    temp = tf.image.per_image_standardization(temp)
     temp = tf.reshape(temp, [size, size, 3])
+    temp = tf.cast(temp, tf.float32) * (1. / 255) - 0.5
 
     return temp
 

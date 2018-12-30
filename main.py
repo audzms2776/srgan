@@ -61,8 +61,8 @@ def train(mode):
     t_predict_image_224 = tf.image.resize_images(net_g.outputs, size=[224, 224], method=0,
                                                  align_corners=False)  # resize_generate_image_for_vgg
 
-    net_vgg, vgg_target_emb = Vgg19_simple_api((t_target_image_224 + 1) / 2)
-    _, vgg_predict_emb = Vgg19_simple_api((t_predict_image_224 + 1) / 2)
+    vgg_target_emb = Vgg19_simple_api((t_target_image_224 + 1) / 2)
+    vgg_predict_emb = Vgg19_simple_api((t_predict_image_224 + 1) / 2)
 
     # test inference
     net_g_test = SRGAN_g(t_image, is_train=False)
@@ -103,19 +103,7 @@ def train(mode):
         print('no checkpoint!')
 
     ###============================= LOAD VGG ===============================###
-    vgg19_npy_path = "vgg19.npy"
-    if not os.path.isfile(vgg19_npy_path):
-        print("Please download vgg19.npz from : https://github.com/machrisaa/tensorflow-vgg")
-        exit()
-    npz = np.load(vgg19_npy_path, encoding='latin1').item()
-
-    params = []
-    for val in sorted(npz.items()):
-        W = np.asarray(val[1][0])
-        b = np.asarray(val[1][1])
-        print("  Loading %s: %s, %s" % (val[0], W.shape, b.shape))
-        params.extend([W, b])
-    tl.files.assign_params(sess, params, net_vgg)
+    vgg_target_emb.restore_params(sess)
 
     ###============================= TRAINING ===============================###
     sample_imgs_96 = tl.prepro.threading_data(train_lr_imgs[0:batch_size], fn=normal_img_fn)
