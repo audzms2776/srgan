@@ -1,5 +1,5 @@
 from absl import flags
-from model import SRGAN_g, SRGAN_d, Vgg19_simple_api, load_g_init, save_g, load_vgg
+from model import SRGAN_g, SRGAN_d, Vgg19_simple_api
 from utils import *
 import tensorlayer as tl
 
@@ -7,8 +7,6 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_string('mode', 'init',
                     'One of ["init", "srgan"]. ')
-
-load_flag = True
 
 
 # features: lr_list
@@ -39,8 +37,6 @@ def g_init_model(features, labels, mode, params):
 
 
 def srgan_model(features, labels, mode, params):
-    global load_flag
-
     if mode == tf.estimator.ModeKeys.PREDICT:
         net_g_test = SRGAN_g(features, is_train=False)
 
@@ -60,8 +56,8 @@ def srgan_model(features, labels, mode, params):
     t_predict_image_224 = tf.image.resize_images(net_g.outputs, size=[224, 224], method=0,
                                                  align_corners=False)  # resize_generate_image_for_vgg
 
-    net_vgg, vgg_target_emb = Vgg19_simple_api((t_target_image_224 + 1) / 2)
-    _, vgg_predict_emb = Vgg19_simple_api((t_predict_image_224 + 1) / 2)
+    vgg_target_emb = Vgg19_simple_api((t_target_image_224 + 1) / 2)
+    vgg_predict_emb = Vgg19_simple_api((t_predict_image_224 + 1) / 2)
 
     d_loss1 = tl.cost.sigmoid_cross_entropy(logits_real, tf.ones_like(logits_real), name='d1')
     d_loss2 = tl.cost.sigmoid_cross_entropy(logits_fake, tf.zeros_like(logits_fake), name='d2')
@@ -89,20 +85,13 @@ def srgan_model(features, labels, mode, params):
 
     joint_op = tf.group([g_optim, d_optim])
 
-    load_vgg(net_vgg)
-
-    if load_flag:
-        load_g_init(net_g)
-        load_flag = False
-
     return tf.estimator.EstimatorSpec(mode, loss=g_loss, train_op=joint_op)
 
 
 def g_init_fn(train_data, valid_data):
     g_init_classifier = tf.estimator.Estimator(
         model_fn=g_init_model,
-        model_dir=config.init_checkpoint_dir,
-        config=tf.estimator.RunConfig(model_dir=config.init_checkpoint_dir),
+        config=tf.estimator.RunConfig(model_dir=config.srgan_checkpoint_dir),
         params={})
 
     for epoch in range(config.TRAIN.n_epoch_init):
@@ -112,13 +101,11 @@ def g_init_fn(train_data, valid_data):
         generated_iter = g_init_classifier.predict(
             input_fn=lambda: train_input_fn(valid_data[0], valid_data[1]))
         save_predict_img(generated_iter, epoch, FLAGS.mode)
-        save_g()
 
 
 def srgan_fn(train_data, valid_data):
     gan_classifier = tf.estimator.Estimator(
         model_fn=srgan_model,
-        model_dir=config.srgan_checkpoint_dir,
         config=tf.estimator.RunConfig(model_dir=config.srgan_checkpoint_dir),
         params={})
 
@@ -129,7 +116,6 @@ def srgan_fn(train_data, valid_data):
         generated_iter = gan_classifier.predict(
             input_fn=lambda: train_input_fn(valid_data[0], valid_data[1]))
         save_predict_img(generated_iter, epoch, FLAGS.mode)
-        save_g()
 
 
 def main(argv):
@@ -137,7 +123,9 @@ def main(argv):
     train_data = (read_file_list(config.TRAIN.lr_img_path), read_file_list(config.TRAIN.hr_img_path))
     valid_data = (read_file_list(config.VALID.lr_img_path), read_file_list(config.VALID.hr_img_path))
 
-    if FLAGS.mode == 'init':
+    if FLAGS.mode == 'test':
+        pass
+    elif FLAGS.mode == 'init':
         print('init function')
         g_init_fn(train_data, valid_data)
     else:

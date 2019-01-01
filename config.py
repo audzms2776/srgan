@@ -33,15 +33,11 @@ config.VALID.lr_img_path = 'valid/resize/'
 config.gs_dir = 'gs://srganimagedata/data/'
 
 # config location
-config.init_checkpoint_dir = './init_checkpoint/'
-config.srgan_checkpoint_dir = './srgan_checkpoint/'
 config.tpu_init_dir = 'gs://srganimagedata/tes1'
 config.tpu_srgan_dir = 'gs://srganimagedata/pre'
 config.gen_image_dir = './checkpoint/generate/'
-config.srgan_dir = './checkpoint/d_srgan/'
+config.srgan_dir = './srgan_checkpoint/'
 
-tl.files.exists_or_mkdir(config.init_checkpoint_dir)
-tl.files.exists_or_mkdir(config.srgan_checkpoint_dir)
 tl.files.exists_or_mkdir(config.gen_image_dir)
 tl.files.exists_or_mkdir(config.srgan_dir)
 

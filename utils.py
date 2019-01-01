@@ -1,4 +1,5 @@
 import os
+
 import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
@@ -26,7 +27,6 @@ def read_tf_img(name, size):
     temp = tf.read_file(name)
     temp = tf.image.decode_image(temp, channels=3)
     temp = tf.reshape(temp, [size, size, 3])
-    temp = tf.cast(temp, tf.float32)
     temp = tf.image.per_image_standardization(temp)
 
     return temp
