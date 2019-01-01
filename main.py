@@ -3,12 +3,9 @@
 
 import time
 
-import numpy as np
-import tensorlayer as tl
 from tensorboardX import SummaryWriter
 
-from config import config
-from model import SRGAN_g, SRGAN_d, Vgg19_simple_api
+from model import *
 from utils import *
 
 ###====================== HYPER-PARAMETERS ===========================###
@@ -33,8 +30,6 @@ def train(mode):
     save_dir_gan = "samples/srgan"
     tl.files.exists_or_mkdir(save_dir_ginit)
     tl.files.exists_or_mkdir(save_dir_gan)
-    checkpoint_dir = "checkpoint"  # checkpoint_resize_conv
-    tl.files.exists_or_mkdir(checkpoint_dir)
 
     ###====================== PRE-LOAD DATA ===========================###
     train_data = (read_file_list(config.TRAIN.lr_img_path), read_file_list(config.TRAIN.hr_img_path))
@@ -49,23 +44,21 @@ def train(mode):
     t_image = tf.placeholder('float32', [None, 96, 96, 3], name='t_image_input_to_SRGAN_generator')
     t_target_image = tf.placeholder('float32', [None, 384, 384, 3], name='t_target_image')
 
-    net_g = SRGAN_g(t_image, is_train=True)
+    net_g = SRGAN_g2(t_image, is_train=True)
+    net_g_test = SRGAN_g2(t_image, is_train=False)
     _, logits_real = SRGAN_d(t_target_image, is_train=True)
-    _, logits_fake = SRGAN_d(net_g.outputs, is_train=True)
+    _, logits_fake = SRGAN_d(net_g, is_train=True)
 
     # vgg inference. 0, 1, 2, 3 BILINEAR NEAREST BICUBIC AREA
 
     t_target_image_224 = tf.image.resize_images(
         t_target_image, size=[224, 224], method=0,
         align_corners=False)
-    t_predict_image_224 = tf.image.resize_images(net_g.outputs, size=[224, 224], method=0,
+    t_predict_image_224 = tf.image.resize_images(net_g, size=[224, 224], method=0,
                                                  align_corners=False)  # resize_generate_image_for_vgg
 
     vgg_target_emb = Vgg19_simple_api((t_target_image_224 + 1) / 2)
     vgg_predict_emb = Vgg19_simple_api((t_predict_image_224 + 1) / 2)
-
-    # test inference
-    net_g_test = SRGAN_g(t_image, is_train=False)
 
     # ###========================== DEFINE TRAIN OPS ==========================###
     d_loss1 = tl.cost.sigmoid_cross_entropy(logits_real, tf.ones_like(logits_real), name='d1')
@@ -73,7 +66,7 @@ def train(mode):
     d_loss = d_loss1 + d_loss2
 
     g_gan_loss = 1e-3 * tl.cost.sigmoid_cross_entropy(logits_fake, tf.ones_like(logits_fake), name='g')
-    mse_loss = tl.cost.mean_squared_error(net_g.outputs, t_target_image, is_mean=True)
+    mse_loss = tl.cost.mean_squared_error(net_g, t_target_image, is_mean=True)
     vgg_loss = 2e-6 * tl.cost.mean_squared_error(vgg_predict_emb.outputs, vgg_target_emb.outputs, is_mean=True)
 
     g_loss = mse_loss + vgg_loss + g_gan_loss
@@ -94,8 +87,6 @@ def train(mode):
     init_op = tf.global_variables_initializer()
     saver = tf.train.Saver()
     sess.run(init_op)
-    tl.files.load_and_assign_npz(sess=sess, name=checkpoint_dir + '/g_init.npz'.format(tl.global_flag['mode']),
-                                 network=net_g)
 
     try:
         saver.restore(sess, config.srgan_dir + 'model.ckpt')
@@ -106,9 +97,9 @@ def train(mode):
     vgg_target_emb.restore_params(sess)
 
     ##========================= initialize G ====================###
-    
+
     if mode == 'g_init':
-        temp_truth = sess.run(valid_iter)
+        temp_truth = sess.run(valid_iter) * 255
         tl.vis.save_images(temp_truth, [4, 4], save_dir_ginit + '/truth.png')
 
         # fixed learning rate
@@ -137,19 +128,17 @@ def train(mode):
             writer.add_scalar('loss/init', total_mse_loss / n_iter, epoch)
 
             # quick evaluation on train set
-            if (epoch != 0) and (epoch % 5 == 0):
-                p_imgs_96 = sess.run(valid_iter)
-
-                out = sess.run(net_g_test.outputs, {t_image: p_imgs_96})
-                print("[*] save images")
-                tl.vis.save_images(out, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
-                tl.files.save_npz(net_g.all_params, name=checkpoint_dir + '/g_init.npz'.format(tl.global_flag['mode']),
-                                  sess=sess)
+#             if (epoch != 0) and (epoch % 5 == 0):
+            p_imgs_96 = sess.run(valid_iter)
+            out = sess.run(net_g_test, {t_image: p_imgs_96}) * 255
+            print("[*] save images")
+            tl.vis.save_images(out, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
+            saver.save(sess, config.srgan_dir + 'model.ckpt')
 
         writer.close()
     else:
         ###========================= train GAN (SRGAN) =========================###
-        temp_truth = sess.run(valid_iter)
+        temp_truth = sess.run(valid_iter) * 255
         tl.vis.save_images(temp_truth, [4, 4], save_dir_gan + '/truth.png')
 
         for epoch in range(0, n_epoch + 1):
@@ -172,7 +161,7 @@ def train(mode):
                 step_time = time.time()
                 b_imgs_96, b_imgs_384 = sess.run(train_iter)
 
-                    # update D
+                # update D
                 errD, _ = sess.run([d_loss, d_optim],
                                    {t_image: b_imgs_96, t_target_image: b_imgs_384})
                 ## update G
@@ -187,6 +176,7 @@ def train(mode):
             log = "[*] Epoch: [%2d/%2d] time: %4.4fs, d_loss: %.8f g_loss: %.8f" % (
                 epoch, n_epoch, time.time() - epoch_time, total_d_loss / n_iter,
                 total_g_loss / n_iter)
+
             print(log)
             writer.add_scalar('loss/g_loss', total_d_loss / n_iter, epoch)
             writer.add_scalar('loss/d_loss', total_g_loss / n_iter, epoch)
@@ -194,7 +184,7 @@ def train(mode):
             ## quick evaluation on train set
             if (epoch != 0) and (epoch % 5 == 0):
                 p_imgs_96 = sess.run(valid_iter)
-                out = sess.run(net_g_test.outputs, {t_image: p_imgs_96})
+                out = sess.run(net_g_test, {t_image: p_imgs_96}) * 255
                 print("[*] save images")
                 tl.vis.save_images(out, [ni, ni], save_dir_gan + '/train_%d.png' % epoch)
                 saver.save(sess, config.srgan_dir + 'model.ckpt')

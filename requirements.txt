@@ -1,0 +1,7 @@
+PIL
+numpy
+tensorflow
+tensorlayer
+boto3
+easydict
+tensorboardX

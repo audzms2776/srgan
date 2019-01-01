@@ -1,27 +1,12 @@
 #! /usr/bin/python
 # -*- coding: utf8 -*-
 
-import time
 import tensorflow as tf
-from tensorlayer.layers import *
 import tensorlayer as tl
-import numpy as np
-import os
+from tensorflow.keras import layers
+from tensorlayer.layers import *
+
 from utils import sn_conv, batch_norm
-
-
-def load_g_init(g):
-    sess = tf.get_default_session()
-    load_params = tl.files.load_npz(path='', name='checkpoint/g.npz')
-    tl.files.assign_params(sess, load_params, g)
-    print('load G!')
-
-
-def save_g():
-    t_image = tf.placeholder('float32', [None, 96, 96, 3], name='temp_placeholder')
-    mm = SRGAN_g(t_image, is_train=True)
-    tl.files.save_npz(mm.all_params, name='checkpoint/g.npz')
-    print('save G!')
 
 
 def SRGAN_g(t_image, is_train=False):
@@ -59,6 +44,63 @@ def SRGAN_g(t_image, is_train=False):
         n = SubpixelConv2d(n, scale=2, n_out_channel=None, act=tf.nn.relu, name='pixelshufflerx2/2')
 
         n = Conv2d(n, 3, (1, 1), (1, 1), act=tf.nn.tanh, padding='SAME', W_init=w_init, name='out')
+        return n
+
+
+def SRGAN_g2(t_image, is_train=False):
+    """ Generator in Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network
+    feature maps (n) and stride (s) feature maps (n) and stride (s)
+    """
+
+    w_init = tf.random_normal_initializer(stddev=0.02)
+    b_init = None  # tf.constant_initializer(value=0.0)
+    g_init = tf.random_normal_initializer(1., 0.02)
+
+    with tf.variable_scope("SRGAN_g2", reuse=tf.AUTO_REUSE):
+        n = tf.layers.conv2d(t_image, 64, kernel_size=(3, 3), activation=tf.nn.relu, padding='same',
+                             kernel_initializer=w_init, name='n64s1/c')
+
+        temp = n
+
+        # B residual blocks
+        for i in range(16):
+            nn = tf.layers.conv2d(n, 64, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
+                                  bias_initializer=b_init,
+                                  name='n64s1/c1/%s' % i)
+            nn = layers.BatchNormalization(trainable=is_train, gamma_initializer=g_init,
+                                           activity_regularizer=tf.nn.relu, name='n64s1/b1/%s' % i)(nn)
+            nn = tf.layers.conv2d(nn, 64, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
+                                  bias_initializer=b_init,
+                                  name='n64s1/c2/%s' % i)
+            nn = layers.BatchNormalization(trainable=is_train, gamma_initializer=g_init, name='n64s1/b2/%s' % i)(nn)
+            nn = tf.add(n, nn, name='b_residual_add/%s' % i)
+
+            n = nn
+
+        n = tf.layers.conv2d(n, 64, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
+                             bias_initializer=b_init,
+                             name='n64s1/c/m')
+
+        n = layers.BatchNormalization(trainable=is_train, gamma_initializer=g_init, name='n64s1/b/m')(n)
+
+        n = tf.add(n, temp, name='add3')
+        # B residual blacks end
+
+        n = tf.layers.conv2d(n, 256, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
+                             bias_initializer=b_init,
+                             name='n256s1/1')
+
+        # size: 96 -> 192
+        n = tf.image.resize_nearest_neighbor(n, (192, 192))
+        n = tf.layers.conv2d(n, 256, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
+                             bias_initializer=b_init,
+                             name='n256s1/2')
+
+        # size: 192 -> 384
+        n = tf.image.resize_nearest_neighbor(n, (384, 384))
+        n = tf.layers.conv2d(n, 3, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
+                             bias_initializer=b_init,
+                             activation=tf.nn.tanh, name='out')
         return n
 
 
