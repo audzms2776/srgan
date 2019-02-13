@@ -7,7 +7,6 @@ from tensorboardX import SummaryWriter
 
 from model import *
 from utils import *
-from pprint import pprint
 
 ###====================== HYPER-PARAMETERS ===========================###
 ## Adam
@@ -121,7 +120,7 @@ def train(mode):
                 epoch, n_epoch_init, time.time() - epoch_time, total_mse_loss / n_iter)
             print(log)
             writer.add_scalar('loss/init', total_mse_loss / n_iter, epoch)
-            
+                    
             v_imgs_96 = tl.prepro.threading_data(valid_data[0][0: batch_size], fn=read_img)
             v_imgs_384 = tl.prepro.threading_data(valid_data[1][0: batch_size], fn=read_img)
             out = sess.run(net_g_test, {t_image: v_imgs_96})
