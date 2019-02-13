@@ -48,10 +48,6 @@ def SRGAN_g(t_image, is_train=False):
 
 
 def SRGAN_g2(t_image, is_train=False):
-    """ Generator in Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network
-    feature maps (n) and stride (s) feature maps (n) and stride (s)
-    """
-
     w_init = tf.random_normal_initializer(stddev=0.02)
     b_init = None  # tf.constant_initializer(value=0.0)
     g_init = tf.random_normal_initializer(1., 0.02)
@@ -109,6 +105,7 @@ def SRGAN_d(input_images, is_train=True):
     gamma_init = tf.random_normal_initializer(1., 0.02)
     df_dim = 64
     lrelu = tf.nn.leaky_relu
+
     with tf.variable_scope("SRGAN_d", reuse=tf.AUTO_REUSE):
         # net_in = InputLayer(input_images, name='input/images')
         net_h0 = sn_conv(input_images, df_dim, 4, 2, act=lrelu, name='h0/c')

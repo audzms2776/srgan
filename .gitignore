@@ -10,3 +10,7 @@ valid/
 train/
 original/
 resize/
+data/
+runs/
+srgan_checkpoint/
+models/

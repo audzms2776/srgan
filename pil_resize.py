@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 original_path = 'original'
 resize_path = 'resize'
-folder_arr = next(os.walk('.'))[1]
+folder_arr = ['data']
 pbar = None
 
 
