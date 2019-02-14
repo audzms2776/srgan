@@ -1,6 +1,7 @@
-PIL
+Pillow
 numpy
 tensorflow
 tensorlayer
 easydict
 tensorboardX
+opencv-python
