@@ -16,7 +16,7 @@ config.TRAIN.n_epoch_init = 20
 # config.TRAIN.decay_every_init = int(config.TRAIN.n_epoch_init / 2)
 
 # adversarial learning (SRGAN)
-config.TRAIN.n_epoch = 2000
+config.TRAIN.n_epoch = 20
 config.TRAIN.lr_decay = 0.1
 config.TRAIN.decay_every = int(config.TRAIN.n_epoch / 2)
 

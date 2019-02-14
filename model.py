@@ -6,7 +6,7 @@ import tensorlayer as tl
 from tensorflow.keras import layers
 from tensorlayer.layers import *
 
-from utils import sn_conv, batch_norm
+from utils import sn_conv, batch_norm, parametric_relu
 
 
 def SRGAN_g(t_image, is_train=False):
@@ -53,7 +53,7 @@ def SRGAN_g2(t_image, is_train=False):
     g_init = tf.random_normal_initializer(1., 0.02)
 
     with tf.variable_scope("SRGAN_g2", reuse=tf.AUTO_REUSE):
-        n = tf.layers.conv2d(t_image, 64, kernel_size=(3, 3), activation=tf.nn.relu, padding='same',
+        n = tf.layers.conv2d(t_image, 64, kernel_size=(3, 3), activation=parametric_relu, padding='same',
                              kernel_initializer=w_init, name='n64s1/c')
 
         temp = n
@@ -64,7 +64,7 @@ def SRGAN_g2(t_image, is_train=False):
                                   bias_initializer=b_init,
                                   name='n64s1/c1/%s' % i)
             nn = layers.BatchNormalization(trainable=is_train, gamma_initializer=g_init,
-                                           activity_regularizer=tf.nn.relu, name='n64s1/b1/%s' % i)(nn)
+                                           activity_regularizer=parametric_relu, name='n64s1/b1/%s' % i)(nn)
             nn = tf.layers.conv2d(nn, 64, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
                                   bias_initializer=b_init,
                                   name='n64s1/c2/%s' % i)
@@ -89,11 +89,17 @@ def SRGAN_g2(t_image, is_train=False):
         # size: 96 -> 192
         n = tf.image.resize_nearest_neighbor(n, (192, 192))
         n = tf.layers.conv2d(n, 256, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
+                            activation=parametric_relu,
                              bias_initializer=b_init,
                              name='n256s1/2')
 
         # size: 192 -> 384
         n = tf.image.resize_nearest_neighbor(n, (384, 384))
+        n = tf.layers.conv2d(n, 16, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
+                            activation=parametric_relu,
+                             bias_initializer=b_init,
+                             name='n256s1/3')
+
         n = tf.layers.conv2d(n, 3, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
                              bias_initializer=b_init,
                              activation=tf.nn.tanh, name='out')

@@ -90,7 +90,7 @@ def train(mode):
         print('no checkpoint!')
 
     ###============================= LOAD VGG ===============================###
-    # vgg_target_emb.restore_params(sess)
+    vgg_target_emb.restore_params(sess)
 
     ##========================= initialize G ====================###
 
@@ -98,7 +98,7 @@ def train(mode):
         # fixed learning rate
         sess.run(tf.assign(lr_v, lr_init))
         print(" ** fixed learning rate: %f (for init G)" % lr_init)
-        for epoch in range(0, n_epoch_init + 1):
+        for epoch in range(n_epoch_init + 1):
             epoch_time = time.time()
             total_mse_loss, n_iter = 0, 0
 
@@ -120,7 +120,7 @@ def train(mode):
                 epoch, n_epoch_init, time.time() - epoch_time, total_mse_loss / n_iter)
             print(log)
             writer.add_scalar('loss/init', total_mse_loss / n_iter, epoch)
-                    
+
             v_imgs_96 = tl.prepro.threading_data(valid_data[0][0: batch_size], fn=read_img)
             v_imgs_384 = tl.prepro.threading_data(valid_data[1][0: batch_size], fn=read_img)
             out = sess.run(net_g_test, {t_image: v_imgs_96})
@@ -128,12 +128,11 @@ def train(mode):
             print("[*] save images")
             tl.vis.save_images(out, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
             tl.vis.save_images(v_imgs_384, [ni, ni], save_dir_ginit + '/true_train.png')
-            # saver.save(sess, config.srgan_dir + 'model.ckpt')
-
+        saver.save(sess, config.srgan_dir + 'model.ckpt')
         writer.close()
     else:
         ###========================= train GAN (SRGAN) =========================###
-        for epoch in range(0, n_epoch + 1):
+        for epoch in range(n_epoch + 1):
             ## update learning rate
             if epoch != 0 and (epoch % decay_every == 0):
                 new_lr_decay = lr_decay ** (epoch // decay_every)
@@ -181,9 +180,10 @@ def train(mode):
             out = sess.run(net_g_test, {t_image: v_imgs_96})
             print(out.shape)
             print("[*] save images")
-            tl.vis.save_images(out, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
-            tl.vis.save_images(v_imgs_384, [ni, ni], save_dir_ginit + '/true_train.png')
+            tl.vis.save_images(out, [ni, ni], save_dir_gan + '/train_%d.png' % epoch)
+            tl.vis.save_images(v_imgs_384, [ni, ni], save_dir_gan + '/true_train.png')
 
+        saver.save(sess, config.srgan_dir + 'model.ckpt')
         writer.close()
 
 
