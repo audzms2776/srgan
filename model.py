@@ -80,7 +80,6 @@ def SRGAN_g2(t_image, is_train=False):
         # B residual blacks end
 
         n = tf.layers.conv2d(n, 256, kernel_size=(3, 3), padding='same', kernel_initializer=w_init, name='n256s1/1')
-
         # size: 96 -> 192
         n = tf.nn.depth_to_space(n, 2)
         n = tf.layers.conv2d(n, 64, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
