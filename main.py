@@ -128,7 +128,7 @@ def train(mode):
             print("[*] save images")
             tl.vis.save_images(out, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
             tl.vis.save_images(v_imgs_384, [ni, ni], save_dir_ginit + '/true_train.png')
-        saver.save(sess, config.srgan_dir + 'model.ckpt')
+            saver.save(sess, config.srgan_dir + 'model.ckpt')
         writer.close()
     else:
         ###========================= train GAN (SRGAN) =========================###
@@ -183,7 +183,7 @@ def train(mode):
             tl.vis.save_images(out, [ni, ni], save_dir_gan + '/train_%d.png' % epoch)
             tl.vis.save_images(v_imgs_384, [ni, ni], save_dir_gan + '/true_train.png')
 
-        saver.save(sess, config.srgan_dir + 'model.ckpt')
+            saver.save(sess, config.srgan_dir + 'model.ckpt')
         writer.close()
 
 
