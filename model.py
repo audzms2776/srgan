@@ -95,7 +95,7 @@ def SRGAN_g2(t_image, is_train=False):
 
         # size: 192 -> 384
         n = tf.image.resize_nearest_neighbor(n, (384, 384))
-        n = tf.layers.conv2d(n, 16, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
+        n = tf.layers.conv2d(n, 3, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
                             activation=parametric_relu,
                              bias_initializer=b_init,
                              name='n256s1/3')
