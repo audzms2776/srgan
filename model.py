@@ -61,12 +61,10 @@ def SRGAN_g2(t_image, is_train=False):
         # B residual blocks
         for i in range(16):
             nn = tf.layers.conv2d(n, 64, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
-                                  bias_initializer=b_init,
                                   name='n64s1/c1/%s' % i)
             nn = layers.BatchNormalization(trainable=is_train, gamma_initializer=g_init,
                                            activity_regularizer=parametric_relu, name='n64s1/b1/%s' % i)(nn)
             nn = tf.layers.conv2d(nn, 64, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
-                                  bias_initializer=b_init,
                                   name='n64s1/c2/%s' % i)
             nn = layers.BatchNormalization(trainable=is_train, gamma_initializer=g_init, name='n64s1/b2/%s' % i)(nn)
             nn = tf.add(n, nn, name='b_residual_add/%s' % i)
@@ -74,7 +72,6 @@ def SRGAN_g2(t_image, is_train=False):
             n = nn
 
         n = tf.layers.conv2d(n, 64, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
-                             bias_initializer=b_init,
                              name='n64s1/c/m')
 
         n = layers.BatchNormalization(trainable=is_train, gamma_initializer=g_init, name='n64s1/b/m')(n)
@@ -82,27 +79,20 @@ def SRGAN_g2(t_image, is_train=False):
         n = tf.add(n, temp, name='add3')
         # B residual blacks end
 
-        n = tf.layers.conv2d(n, 256, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
-                             bias_initializer=b_init,
-                             name='n256s1/1')
+        n = tf.layers.conv2d(n, 256, kernel_size=(3, 3), padding='same', kernel_initializer=w_init, name='n256s1/1')
 
         # size: 96 -> 192
-        n = tf.image.resize_nearest_neighbor(n, (192, 192))
-        n = tf.layers.conv2d(n, 256, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
-                            activation=parametric_relu,
-                             bias_initializer=b_init,
-                             name='n256s1/2')
+        n = tf.nn.depth_to_space(n, 2)
+        n = tf.layers.conv2d(n, 64, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
+                            activation=parametric_relu, name='n256s1/2')
 
         # size: 192 -> 384
-        n = tf.image.resize_nearest_neighbor(n, (384, 384))
-        n = tf.layers.conv2d(n, 3, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
-                            activation=parametric_relu,
-                             bias_initializer=b_init,
-                             name='n256s1/3')
+        n = n = tf.nn.depth_to_space(n, 2)
+        n = tf.layers.conv2d(n, 64, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
+                            activation=parametric_relu, name='n256s1/3')
 
-        n = tf.layers.conv2d(n, 3, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
-                             bias_initializer=b_init,
-                             activation=tf.nn.tanh, name='out')
+        n = tf.layers.conv2d(n, 3, kernel_size=(1, 1), padding='same', kernel_initializer=w_init,
+                            activation=tf.nn.tanh, name='out')
         return n
 
 
