@@ -57,12 +57,6 @@ def train(mode):
     vgg_predict_emb = Vgg19_simple_api((t_predict_image_224 + 1) / 2)
 
     # ###========================== DEFINE TRAIN OPS ==========================###
-    real_predict = tf.equal(logits_real, tf.ones_like(logits_real))
-    fake_predict = tf.equal(logits_fake, tf.zeros_like(logits_fake))
-
-    real_acc = tf.reduce_mean(tf.cast(real_predict, tf.float32))
-    fake_acc = tf.reduce_mean(tf.cast(fake_predict, tf.float32))
-
     d_loss1 = tl.cost.sigmoid_cross_entropy(logits_real, tf.ones_like(logits_real), name='d1')
     d_loss2 = tl.cost.sigmoid_cross_entropy(logits_fake, tf.zeros_like(logits_fake), name='d2')
     d_loss = d_loss1 + d_loss2
@@ -161,12 +155,12 @@ def train(mode):
                 b_imgs_384 = tl.prepro.threading_data(train_data[1][idx:idx + batch_size], fn=read_img)
 
                 # update D
-                errD, r_acc, f_acc, _ = sess.run([d_loss, real_acc, fake_acc, d_optim],
+                errD, _ = sess.run([d_loss, d_optim],
                                    {t_image: b_imgs_96, t_target_image: b_imgs_384})
                 ## update G
                 errG, _ = sess.run([g_loss, g_optim], {t_image: b_imgs_96, t_target_image: b_imgs_384})
-                print("Epoch [%2d/%2d] %4d time: %4.4fs, d_loss: %.8f g_loss: %.8f (real: %.8f, fake: %.8f)" %
-                      (epoch, n_epoch, n_iter, time.time() - step_time, errD, errG, r_acc, f_acc))
+                print("Epoch [%2d/%2d] %4d time: %4.4fs, d_loss: %.8f g_loss: %.8f" %
+                      (epoch, n_epoch, n_iter, time.time() - step_time, errD, errG))
 
                 total_d_loss += errD
                 total_g_loss += errG
