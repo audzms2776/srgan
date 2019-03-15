@@ -116,20 +116,22 @@ def train(mode):
                 total_mse_loss += errM
                 n_iter += 1
 
+                if n_iter % 100 == 0:
+                    v_imgs_96 = tl.prepro.threading_data(valid_data[0][0: batch_size], fn=read_img)
+                    v_imgs_384 = tl.prepro.threading_data(valid_data[1][0: batch_size], fn=read_img)
+                    out = sess.run(net_g_test, {t_image: v_imgs_96})
+                    print(out.shape)
+                    print("[*] save images")
+                    tl.vis.save_images(out, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
+                    tl.vis.save_images(v_imgs_384, [ni, ni], save_dir_ginit + '/true_train.png')
+                    saver.save(sess, config.srgan_dir + 'model.ckpt')
+
             log = "[*] Epoch: [%2d/%2d] time: %4.4fs, mse: %.8f" % (
                 epoch, n_epoch_init, time.time() - epoch_time, total_mse_loss / n_iter)
             print(log)
             writer.add_scalar('loss/init', total_mse_loss / n_iter, epoch)
-
-            if (epoch + 1) % 5 == 0:
-                v_imgs_96 = tl.prepro.threading_data(valid_data[0][0: batch_size], fn=read_img)
-                v_imgs_384 = tl.prepro.threading_data(valid_data[1][0: batch_size], fn=read_img)
-                out = sess.run(net_g_test, {t_image: v_imgs_96})
-                print(out.shape)
-                print("[*] save images")
-                tl.vis.save_images(out, [ni, ni], save_dir_ginit + '/train_%d.png' % epoch)
-                tl.vis.save_images(v_imgs_384, [ni, ni], save_dir_ginit + '/true_train.png')
-                saver.save(sess, config.srgan_dir + 'model.ckpt')
+            saver.save(sess, config.srgan_dir + 'model.ckpt')
+            
         writer.close()
     else:
         ###========================= train GAN (SRGAN) =========================###
@@ -155,16 +157,28 @@ def train(mode):
                 b_imgs_384 = tl.prepro.threading_data(train_data[1][idx:idx + batch_size], fn=read_img)
 
                 # update D
-                errD, _ = sess.run([d_loss, d_optim],
+                real_loss, fake_loss, _ = sess.run([d_loss1, d_loss2, d_optim],
                                    {t_image: b_imgs_96, t_target_image: b_imgs_384})
                 ## update G
-                errG, _ = sess.run([g_loss, g_optim], {t_image: b_imgs_96, t_target_image: b_imgs_384})
-                print("Epoch [%2d/%2d] %4d time: %4.4fs, d_loss: %.8f g_loss: %.8f" %
-                      (epoch, n_epoch, n_iter, time.time() - step_time, errD, errG))
+                pixel_loss, _ = sess.run([mse_loss, g_optim], {t_image: b_imgs_96, t_target_image: b_imgs_384})
 
-                total_d_loss += errD
-                total_g_loss += errG
+                print("Epoch [%2d/%2d] %4d time: %4.4fs, D(x): %.8f, D(G(x)): %.8f MSE: %.8f" %
+                      (epoch, n_epoch, n_iter, time.time() - step_time, real_loss, fake_loss, pixel_loss))
+
+                total_d_loss += real_loss
+                total_g_loss += fake_loss
                 n_iter += 1
+
+                ## quick evaluation on train set
+                if n_iter % 50 ==0:
+                    v_imgs_96 = tl.prepro.threading_data(valid_data[0][0: batch_size], fn=read_img)
+                    v_imgs_384 = tl.prepro.threading_data(valid_data[1][0: batch_size], fn=read_img)
+                    out = sess.run(net_g_test, {t_image: v_imgs_96})
+                    print(out.shape)
+                    print("[*] save images")
+                    tl.vis.save_images(out, [ni, ni], save_dir_gan + '/train_%d.png' % epoch)
+                    tl.vis.save_images(v_imgs_384, [ni, ni], save_dir_gan + '/true_train.png')
+                    saver.save(sess, config.srgan_dir + 'model.ckpt')
 
             log = "[*] Epoch: [%2d/%2d] time: %4.4fs, d_loss: %.8f g_loss: %.8f" % (
                 epoch, n_epoch, time.time() - epoch_time, total_d_loss / n_iter,
@@ -173,17 +187,6 @@ def train(mode):
             print(log)
             writer.add_scalar('loss/g_loss', total_d_loss / n_iter, epoch)
             writer.add_scalar('loss/d_loss', total_g_loss / n_iter, epoch)
-
-            ## quick evaluation on train set
-            if (epoch + 1) % 5 ==0:
-                v_imgs_96 = tl.prepro.threading_data(valid_data[0][0: batch_size], fn=read_img)
-                v_imgs_384 = tl.prepro.threading_data(valid_data[1][0: batch_size], fn=read_img)
-                out = sess.run(net_g_test, {t_image: v_imgs_96})
-                print(out.shape)
-                print("[*] save images")
-                tl.vis.save_images(out, [ni, ni], save_dir_gan + '/train_%d.png' % epoch)
-                tl.vis.save_images(v_imgs_384, [ni, ni], save_dir_gan + '/true_train.png')
-
             saver.save(sess, config.srgan_dir + 'model.ckpt')
         writer.close()
 
