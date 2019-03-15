@@ -15,7 +15,7 @@ def SRGAN_g2(t_image, is_train=False):
     g_init = tf.random_normal_initializer(1., 0.02)
 
     with tf.variable_scope("SRGAN_g2", reuse=tf.AUTO_REUSE):
-        n = tf.layers.conv2d(t_image, 64, kernel_size=(3, 3), activation=parametric_relu, padding='same',
+        n = tf.layers.conv2d(t_image, 64, kernel_size=(9, 9), activation=parametric_relu, padding='same',
                              kernel_initializer=w_init, name='n64s1/c')
 
         temp = n
@@ -34,27 +34,21 @@ def SRGAN_g2(t_image, is_train=False):
             n = nn
 
         n = tf.layers.conv2d(n, 64, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
-                             name='n64s1/c/m')
-
-        n = layers.BatchNormalization(trainable=is_train, gamma_initializer=g_init, name='n64s1/b/m')(n)
+                             name='n64s1/c/m', activation=parametric_relu)
 
         n = tf.add(n, temp, name='add3')
         # B residual blacks end
 
         n = tf.layers.conv2d(n, 256, kernel_size=(3, 3), padding='same', kernel_initializer=w_init, name='n256s1/1')
-
         # size: 96 -> 192
-        n = tf.image.resize_nearest_neighbor(n, (192, 192))
-        n = tf.layers.conv2d(n, 64, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
-                            activation=parametric_relu, name='n256s1/2')
-
+        n = tf.nn.depth_to_space(n, 2)
+        n = parametric_relu(n)
+        n = tf.layers.conv2d(n, 256, kernel_size=(3, 3), padding='same', kernel_initializer=w_init, name='n256s1/2')
         # size: 192 -> 384
-        n = tf.image.resize_nearest_neighbor(n, (384, 384))
-        n = tf.layers.conv2d(n, 64, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
-                            activation=parametric_relu, name='n256s1/3')
+        n = tf.nn.depth_to_space(n, 2)
+        n = parametric_relu(n)
 
-
-        n = tf.layers.conv2d(n, 3, kernel_size=(3, 3), padding='same', kernel_initializer=w_init,
+        n = tf.layers.conv2d(n, 3, kernel_size=(9, 9), padding='same', kernel_initializer=w_init,
                             activation=tf.nn.tanh, name='out')
         return n
 
@@ -77,12 +71,12 @@ def SRGAN_d(input_images, is_train=True):
         net_h4 = batch_norm(net_h4, act=lrelu, is_train=is_train, gamma_init=gamma_init, name='h4/bn')
         net_h5 = sn_conv(net_h4, df_dim * 32, 4, 2, name='h5/c')
         net_h5 = batch_norm(net_h5, act=lrelu, is_train=is_train, gamma_init=gamma_init, name='h5/bn')
-        net_h6 = sn_conv(net_h5, df_dim * 16, 1, 1, name='h6/c')
+        net_h6 = sn_conv(net_h5, df_dim * 16, 3, 1, name='h6/c')
         net_h6 = batch_norm(net_h6, act=lrelu, is_train=is_train, gamma_init=gamma_init, name='h6/bn')
-        net_h7 = sn_conv(net_h6, df_dim * 8, 1, 1, name='h7/c')
+        net_h7 = sn_conv(net_h6, df_dim * 8, 3, 1, name='h7/c')
         net_h7 = batch_norm(net_h7, is_train=is_train, gamma_init=gamma_init, name='h7/bn')
 
-        net = sn_conv(net_h7, df_dim * 2, 1, 1, name='res/c')
+        net = sn_conv(net_h7, df_dim * 2, 3, 1, name='res/c')
         net = batch_norm(net, act=lrelu, is_train=is_train, gamma_init=gamma_init, name='res/bn')
         net = sn_conv(net, df_dim * 2, 3, 1, name='res/c2')
         net = batch_norm(net, act=lrelu, is_train=is_train, gamma_init=gamma_init, name='res/bn2')
