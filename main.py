@@ -170,7 +170,7 @@ def train(mode):
                 n_iter += 1
 
                 ## quick evaluation on train set
-                if n_iter % 50 ==0:
+                if n_iter % 100 ==0:
                     v_imgs_96 = tl.prepro.threading_data(valid_data[0][0: batch_size], fn=read_img)
                     v_imgs_384 = tl.prepro.threading_data(valid_data[1][0: batch_size], fn=read_img)
                     out = sess.run(net_g_test, {t_image: v_imgs_96})
