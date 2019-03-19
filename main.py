@@ -86,6 +86,7 @@ def train(mode):
 
     try:
         saver.restore(sess, config.srgan_dir + 'model.ckpt')
+        print('load checkpoint!')
     except:
         print('no checkpoint!')
 
