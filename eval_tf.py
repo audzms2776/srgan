@@ -35,17 +35,17 @@ valid_data = (read_file_list(config.VALID.lr_img_path), read_file_list(config.VA
 t_image = tf.placeholder('float32', [None, 96, 96, 3], name='t_image_input_to_SRGAN_generator')
 t_target_image = tf.placeholder('float32', [None, 384, 384, 3], name='t_target_image')
 
-net_g = SRGAN_g2(t_image, is_train=True)
-net_g_test = SRGAN_g2(t_image, is_train=False)
+net_g = SRGAN_g(t_image, is_train=True)
+net_g_test = SRGAN_g(t_image, is_train=False)
 _, logits_real = SRGAN_d(t_target_image, is_train=True)
-_, logits_fake = SRGAN_d(net_g, is_train=True)
+_, logits_fake = SRGAN_d(net_g.outputs, is_train=True)
 
 # vgg inference. 0, 1, 2, 3 BILINEAR NEAREST BICUBIC AREA
 
 t_target_image_224 = tf.image.resize_images(
     t_target_image, size=[224, 224], method=0,
     align_corners=False)
-t_predict_image_224 = tf.image.resize_images(net_g, size=[224, 224], method=0,
+t_predict_image_224 = tf.image.resize_images(net_g.outputs, size=[224, 224], method=0,
                                                 align_corners=False)  # resize_generate_image_for_vgg
 
 vgg_target_emb = Vgg19_simple_api((t_target_image_224 + 1) / 2)
@@ -63,7 +63,7 @@ d_loss2 = tl.cost.sigmoid_cross_entropy(logits_fake, tf.zeros_like(logits_fake),
 d_loss = d_loss1 + d_loss2
 
 g_gan_loss = 1e-3 * tl.cost.sigmoid_cross_entropy(logits_fake, tf.ones_like(logits_fake), name='g')
-mse_loss = tl.cost.mean_squared_error(net_g, t_target_image, is_mean=True)
+mse_loss = tl.cost.mean_squared_error(net_g.outputs, t_target_image, is_mean=True)
 vgg_loss = 2e-6 * tl.cost.mean_squared_error(vgg_predict_emb.outputs, vgg_target_emb.outputs, is_mean=True)
 
 g_loss = mse_loss + vgg_loss + g_gan_loss
@@ -99,7 +99,7 @@ for idx in range(0, len(valid_data[0]), batch_size):
     print(idx)
     v_imgs_96 = tl.prepro.threading_data(valid_data[0][idx : idx+batch_size], fn=read_img)
     
-    test_result = sess.run([net_g_test], {t_image: v_imgs_96})
+    test_result = sess.run([net_g_test.outputs], {t_image: v_imgs_96})
     
     for test in test_result[0]:
         re_test = np.array([test])
