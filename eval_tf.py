@@ -4,6 +4,7 @@ from tensorboardX import SummaryWriter
 
 from model import *
 from utils import *
+from tqdm import tqdm
 
 ###====================== HYPER-PARAMETERS ===========================###
 ## Adam
@@ -94,15 +95,13 @@ except:
 cnt = 0
 print(len(valid_data[0]))
 
-for idx in range(0, len(valid_data[0]), batch_size):
+for idx in tqdm(range(0, len(valid_data[0]), batch_size)):
     step_time = time.time()
-    print(idx)
     v_imgs_96 = tl.prepro.threading_data(valid_data[0][idx : idx+batch_size], fn=read_img)
     
     test_result = sess.run([net_g_test.outputs], {t_image: v_imgs_96})
     
     for test in test_result[0]:
         re_test = np.array([test])
-        print(re_test.shape)
         tl.vis.save_images(re_test, [1, 1], 'test/{}.png'.format(cnt))
         cnt += 1
